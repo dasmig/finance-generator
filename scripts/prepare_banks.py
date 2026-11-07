@@ -16,8 +16,12 @@ import html
 import json
 import re
 
-from fingen_data import CURATED, RAW, TIERS, fits, read_tsv, spec_classes, survey, write_table
+import xml.etree.ElementTree as ET
+import zipfile
+
+from fingen_data import CURATED, RAW, RESOURCES, TIERS, fits, read_tsv, spec_classes, survey, write_table
 from prepare_iban import load_formats
+from prepare_schemes import COLUMNS as SCHEME_COLUMNS, COMMENT as SCHEME_COMMENT, complete_lists, safe_method
 
 COLUMNS = ["scheme", "bank_code", "name", "weight", "bic", "branch_codes", "method", "everyday_code", "source"]
 LITE_PER_SCHEME = 60
@@ -43,7 +47,10 @@ NOT_RETAIL = re.compile(
     r"\b(funds?|fondos?|asset management|securities|insurance|clearing|custody|brokers?"
     r"|brokerage|leasing|factoring|holdings?|e-?money|electronic money|payments?|pension"
     r"|wealth management|private equity|development bank|export[- ]import|european investment bank|rating agency"
-    r"|trustly|zimpler|juni technology|steven ab)\b", re.I)
+    r"|trustly|zimpler|juni technology|steven ab"
+    # Global wholesale and custody banks. Goldman's Marcus and Mizuho at home are the exceptions, and rare.
+    r"|j\.?p\.? ?morgan|chase manhattan|goldman sachs|morgan stanley|state street|bank of new york|bny mellon|nomura"
+    r"|mizuho|citibank europe|credit suisse|barclays capital|allfunds)\b", re.I)
 # These words also appear in real banks' names (First Investment Bank, Forex Bank, Grupo Mutual, CBC Banque et Assurances).
 NOT_RETAIL_UNLESS_BANK = re.compile(r"\b(investments?|exchange|forex|mutual|assurances?)\b", re.I)
 NAMED_BANK = re.compile(r"bank|banque|banco|banca|banka|grupo mutual", re.I)
@@ -65,6 +72,9 @@ RU_BANK_TYPES = {"20", "30"}
 # A bank code of four capitals is the BIC's first four, so a BIC gives the code (GB, NL, IE, PK and others).
 LETTER_CODE = "aaaa"
 JOINED_CODES = {"SI"}
+XLSX = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+# The banks with a weight set in Inland Revenue's table, as dasmig/fingen.hpp's nz_account rule has them.
+NZ_CHECKED_BANKS = set("01 02 03 04 05 06 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 33 35 38 88".split())
 
 
 def clean(name):
@@ -77,22 +87,26 @@ def retail(name):
     return not NOT_RETAIL_UNLESS_BANK.search(name) or bool(NAMED_BANK.search(name))
 
 
-def schwifty_rows(cc):
-    """Live rows of a country, generated files first, with `bank_codes` lists expanded."""
+def schwifty_rows(cc, retired=False):
+    """Rows of a country, generated files first, with `bank_codes` lists expanded; live ones unless asked."""
     folder = RAW / "schwifty/bank_registry"
     files = sorted(folder.glob(f"generated_{cc.lower()}*.json")) + sorted(folder.glob(f"manual_{cc.lower()}*.json"))
     for path in files:
         data = json.loads(path.read_text(encoding="utf-8"))
         for entry in data["entries"] if isinstance(data, dict) else data:
-            if entry.get("status"):
+            if entry.get("status") and not retired:
                 continue
             codes = entry.get("bank_codes") or [entry.get("bank_code", "")]
             for code in codes:
                 yield {**entry, "bank_code": code, "file": "generated" if "generated" in path.name else "manual"}
 
 
-def from_schwifty(scheme, cc, entry, report):
-    """The banks of an IBAN country whose code fits the registry's bank position."""
+def from_schwifty(scheme, cc, entry, report, complete):
+    """The banks of an IBAN country whose code fits the registry's bank position.
+
+    In a complete list a code filtered out keeps a row with weight 0: it is never drawn, but it is
+    assigned, so `safe` must not call it unassigned and `is_valid` must know it.
+    """
     positions = entry.get("positions", {}).get("bank_code")
     if not positions:
         return []
@@ -116,16 +130,26 @@ def from_schwifty(scheme, cc, entry, report):
             main = rows[sorted(range(len(rows)), key=lambda i: (rows[i]["bank_code"], i))[0]]
         name = clean(main.get("short_name") or main.get("name"))
         # A letter-coded list is a BIC list, which holds any company with a BIC.
+        method = main.get("checksum_algo", "") if cc == "DE" else ""
+        weight = len(rows)
         if not name or not retail(name) or (letters and not BANK_WORD.search(name)):
             report["not_retail"] += 1
-            continue
-        method = main.get("checksum_algo", "") if cc == "DE" else ""
-        if cc == "DE" and method not in GERMAN_METHODS:
+            weight = 0
+        elif cc == "DE" and method not in GERMAN_METHODS:
             report["german_method"] += 1
-            continue
-        banks.append({"scheme": scheme, "bank_code": code, "name": name, "weight": len(rows),
-                      "bic": main.get("bic") or "", "method": method, "source": f"schwifty-{main['file']}",
-                      "branches": []})
+            weight = 0
+        if weight or cc in complete:
+            banks.append({"scheme": scheme, "bank_code": code, "name": name or code, "weight": weight,
+                          "bic": main.get("bic") or "", "method": method, "source": f"schwifty-{main['file']}",
+                          "branches": []})
+    if cc in complete:
+        known = {b["bank_code"] for b in banks}
+        retired = {r["bank_code"][:len(classes)] if cc in JOINED_CODES else r["bank_code"]: r
+                   for r in schwifty_rows(cc, retired=True)}
+        for code, row in sorted(retired.items()):
+            if code not in known and fits(code, classes):
+                banks.append({"scheme": scheme, "bank_code": code, "name": clean(row.get("name")) or code, "weight": 0,
+                              "bic": "", "method": "", "source": f"schwifty-{row['file']}", "branches": []})
     return banks
 
 
@@ -199,6 +223,33 @@ def from_zengin():
     return banks
 
 
+def nz_register_rows():
+    """Payments NZ's Bank Branch Register as (bank, branch, bank name, branch name)."""
+    with zipfile.ZipFile(RAW / "nz_branch_register.xlsx") as book:
+        strings = ["".join(t.text or "" for t in si.iter(f"{XLSX}t"))
+                   for si in ET.fromstring(book.read("xl/sharedStrings.xml"))]
+        sheet = ET.fromstring(book.read("xl/worksheets/sheet1.xml"))
+    for row in sheet.iter(f"{XLSX}row"):
+        values = {}
+        for cell in row:
+            value = cell.find(f"{XLSX}v")
+            if value is not None:
+                values[re.sub(r"\d", "", cell.get("r"))] = strings[int(value.text)] if cell.get("t") == "s" else value.text
+        if values.get("A", "").isdigit():
+            yield values["A"], values.get("B", ""), values.get("E", ""), values.get("F", "")
+
+
+def from_new_zealand():
+    """Branches are the weights. Banks without a published check rule are left out, as are test branches."""
+    grouped = {}
+    for bank, branch, name, branch_name in nz_register_rows():
+        if bank in NZ_CHECKED_BANKS and "test" not in branch_name.lower():
+            grouped.setdefault(bank, (name, []))[1].append(branch)
+    return [{"scheme": "nz-account", "bank_code": bank, "name": clean(name), "weight": len(branches), "bic": "",
+             "method": "", "source": "paymentsnz", "branches": sorted(branches)}
+            for bank, (name, branches) in sorted(grouped.items())]
+
+
 def from_brazil():
     """The central bank's STR participants: the ISPB goes in the IBAN, the COMPE code is the everyday one."""
     banks = []
@@ -246,11 +297,26 @@ def sample(values, count):
     return [values[i * len(values) // count] for i in range(count)]
 
 
+def write_lite_lists(too_long):
+    """A list cut to fit lite cannot say a code is unassigned: a code outside it may be a real bank's.
+
+    So lite drops `list_complete` for those schemes and `safe` falls back to the next method.
+    """
+    tests = {r["scheme"] for r in read_tsv(CURATED / "test_accounts.tsv")}
+    rows = read_tsv(RESOURCES / "lite/schemes.tsv")
+    for row in rows:
+        if row["list_complete"] and row["key"] in too_long:
+            row["list_complete"] = ""
+            row["safe_method"] = safe_method(row["builder"], row["check"], row["key"] in tests, False)
+    write_table("lite", "schemes.tsv", SCHEME_COMMENT, SCHEME_COLUMNS, rows)
+
+
 def main():
     formats, _ = load_formats()
     gleif = gleif_by_country()
     report = {"misfit": 0, "not_retail": 0, "german_method": 0}
-    banks = from_ifsc() + from_zengin() + from_curated() + from_brazil() + from_russia()
+    complete = complete_lists()
+    banks = from_ifsc() + from_zengin() + from_curated() + from_brazil() + from_russia() + from_new_zealand()
     listed = {b["scheme"] for b in banks}
     without = []
     for row in survey():
@@ -259,8 +325,12 @@ def main():
             continue
         found = []
         if klass in ("iban", "iban_unregistered", "territory"):
-            found = from_schwifty(scheme, cc, formats[cc], report)
-            found += from_letter_bics(scheme, cc, formats[cc], gleif, {b["bank_code"] for b in found})
+            found = from_schwifty(scheme, cc, formats[cc], report, complete)
+            drawn = {b["bank_code"] for b in found if b["weight"]}
+            letters = from_letter_bics(scheme, cc, formats[cc], gleif, drawn)
+            # A code the list filtered out but GLEIF knows as a bank is drawn, as before.
+            taken = {b["bank_code"] for b in letters}
+            found = [b for b in found if b["bank_code"] not in taken] + letters
         elif klass in ("generic", "bic_account"):
             found = from_gleif(scheme, cc, gleif)
         banks += found
@@ -275,18 +345,23 @@ def main():
                "developed by SWIFT. Any use of the Mapping Table, in whole or in part, is subject to the BIC/LEI Mapping Table "
                "License Agreement as published with the Mapping Table available on GLEIF's website. The Mapping Table is updated "
                "monthly. For the latest BIC information and updates, always refer to www.swift.com/bic.")
+    too_long = set()
     for tier in TIERS:
         rows = []
         for scheme in sorted({b["scheme"] for b in banks}):
             members = [b for b in banks if b["scheme"] == scheme]
-            if tier == "lite":
+            if tier == "lite" and len(members) > LITE_PER_SCHEME:
+                # Cut to the largest, this tier's list is no longer complete (see write_lite_lists).
+                too_long.add(scheme)
+                members = [b for b in members if b["weight"]]
                 members = sorted(members, key=lambda b: (-b["weight"], b["bank_code"]))[:LITE_PER_SCHEME]
                 members.sort(key=lambda b: b["bank_code"])
             for b in members:
                 rows.append({**b, "branch_codes": ",".join(sample(b["branches"], BRANCH_SAMPLE[tier]))})
         write_table(tier, "banks.tsv", comment, COLUMNS, rows)
         print(f"banks.tsv {tier}: {len(rows)} rows over {len({r['scheme'] for r in rows})} schemes")
-    print("dropped:", report)
+    write_lite_lists(too_long)
+    print("not drawn:", report)
     total = sum(int(r["population"] or 0) for r in survey() if r["klass"] != "territory")
     gap = [r for r in without if r["klass"] != "territory"]
     share = sum(int(r["population"] or 0) for r in gap) / total

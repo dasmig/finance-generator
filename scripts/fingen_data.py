@@ -82,10 +82,11 @@ def fits(code, classes):
 
 
 def pattern_lengths(pattern):
-    """The shortest and longest text a core pattern of # @ * {n} {n,m} can give; ValueError otherwise."""
+    """The shortest and longest text a core pattern of # @ * {n} {n,m} and literal capitals or digits
+    can give; ValueError otherwise."""
     if not pattern:
         return 0, 0
-    tokens = re.findall(r"[#@*](?:\{\d+(?:,\d+)?\})?", pattern)
+    tokens = re.findall(r"[#@*A-Z0-9](?:\{\d+(?:,\d+)?\})?", pattern)
     if "".join(tokens) != pattern:
         raise ValueError(f"unreadable pattern {pattern!r}")
     low = high = 0

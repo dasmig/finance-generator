@@ -31,7 +31,6 @@ bs-bic	BAVOBSNS	Banco Votorantim S.A. - Nassau Branch	1	BAVOBSNSXXX				gleif
 bs-bic	BBINBSNS	BANCO BOCOM BBM S.A.	1	BBINBSNSXXX				gleif
 bs-bic	BBINBSNX	BBM Bank Limited	1	BBINBSNXXXX				gleif
 bs-bic	BBVIBSN1	BANCO BILBAO VIZCAYA ARGENTARIA SOCIEDAD ANONIMA	1	BBVIBSN1XXX				gleif
-bs-bic	BIGABSNS	Credit Suisse Brazil (Bahamas) Limited	1	BIGABSNSXXX				gleif
 bs-bic	BKPRBSN2	BANKPRO LIMITED	1	BKPRBSN2XXX				gleif
 bs-bic	BLICBSN1	HSBC PRIVATE BANK (SUISSE) SA	1	BLICBSN1XXX				gleif
 bs-bic	BOTBBSNS	BANK OF THE BAHAMAS LIMITED	1	BOTBBSNSXXX				gleif
@@ -433,7 +432,6 @@ iban-bg	BPBI	EUROBANK BULGARIA AD	1	BPBIBGSF				schwifty-manual
 iban-bg	BUIN	ALLIANZ BANK BULGARIA AD	1	BUINBGSF				schwifty-manual
 iban-bg	CECB	CENTRAL COOPERATIVE BANK AD	1	CECBBGSF				schwifty-manual
 iban-bg	CEDE	CLEARSTREAM BANKING S.A. (ICSD)	1	CEDELULL				schwifty-manual
-iban-bg	CITI	CITIBANK EUROPE PLC., BULGARIA BRANCH	1	CITIBGSF				schwifty-manual
 iban-bg	CREX	TOKUDA BANK AD	1	CREXBGSF				schwifty-manual
 iban-bg	DEMI	D COMMERCE BANK AD	1	DEMIBGSF				schwifty-manual
 iban-bg	FINV	FIRST INVESTMENT BANK AD	1	FINVBGSF				schwifty-manual
@@ -468,7 +466,6 @@ iban-bh	BIBB	BAHRAIN ISLAMIC BANK	1	BIBBBHBMXXX				gleif
 iban-bh	BJOR	Bank of Jordan Company	1	BJORBHBMXXX				gleif
 iban-bh	BOML	MASHREQBANK PSC	1	BOMLBHBMXXX				gleif
 iban-bh	CAAB	CAIRO AMMAN BANK FOREIGN BRANCH COMPANY	1	CAABBHBMXXX				gleif
-iban-bh	CHAS	JPMorgan Chase Bank, National Association	1	CHASBH21XXX				gleif
 iban-bh	CITI	Citibank, National Association	1	CITIBHBXXXX				gleif
 iban-bh	DENI	Denizbank Anonim Şirketi Bahrain Branch	1	DENIBHBXXXX				gleif
 iban-bh	FNNB	QNB BANK ANONİM ŞİRKETİ	1	FNNBBHBMXXX				gleif
@@ -510,14 +507,12 @@ iban-br	01852137	BANCO BRASILEIRO DE CRÉDITO SOCIEDADE ANÔNIMA	1				378	bcb
 iban-br	01858774	BANCO BV S.A.	1				413	bcb
 iban-br	02038232	BANCO COOPERATIVO SICOOB S.A. - BANCO SICOOB	1				756	bcb
 iban-br	02318507	BANCO KEB HANA DO BRASIL S.A.	1				757	bcb
-iban-br	02801938	BANCO MORGAN STANLEY S.A.	1				066	bcb
 iban-br	02992317	INTEX BANK BANCO DE CÂMBIO S.A.	1				143	bcb
 iban-br	03017677	Banco J. Safra S.A.	1				074	bcb
 iban-br	03215790	Banco Toyota do Brasil S.A.	1				387	bcb
 iban-br	03323840	Banco Alfa S.A.	1				025	bcb
 iban-br	03609817	Banco Cargill S.A.	1				040	bcb
 iban-br	04184779	Banco Bradescard S.A.	1				063	bcb
-iban-br	04332281	GOLDMAN SACHS DO BRASIL BANCO MULTIPLO S.A.	1				064	bcb
 iban-br	04814563	BANCO AFINZ S.A. - BANCO MÚLTIPLO	1				299	bcb
 iban-br	04866275	Banco Inbursa S.A.	1				012	bcb
 iban-br	04902979	BANCO DA AMAZONIA S.A.	1				003	bcb
@@ -530,7 +525,6 @@ iban-br	07656500	Banco KDB do Brasil S.A.	1				076	bcb
 iban-br	07679404	BANCO TOPÁZIO S.A.	1				082	bcb
 iban-br	08357240	Banco CSF S.A.	1				368	bcb
 iban-br	08609934	MONEYCORP BANCO DE CÂMBIO S.A.	1				259	bcb
-iban-br	09274232	STATE STREET BRASIL S.A. - BANCO COMERCIAL	1				014	bcb
 iban-br	09516419	PICPAY BANK - BANCO MÚLTIPLO S.A	1				079	bcb
 iban-br	09526594	BANCO MASTER DE INVESTIMENTO S.A. - EM LIQUIDAÇÃO EXTRAJUDICIAL	1				141	bcb
 iban-br	10371492	Banco Yamaha Motor do Brasil S.A.	1				475	bcb
@@ -555,6 +549,9 @@ iban-br	17351180	BANCO TRIANGULO S.A.	1				634	bcb
 iban-br	17453575	ICBC do Brasil Banco Múltiplo S.A.	1				132	bcb
 iban-br	18520834	UBS BB BANCO DE INVESTIMENTO S.A.	1				129	bcb
 iban-br	19307785	BRAZA BANK S.A. BANCO DE CÂMBIO	1				128	bcb
+iban-br	20018183	STARK BANK S.A. - INSTITUICAO DE PAGAMENTO	1				665	bcb
+iban-br	22575466	SRM BANK INSTITUIÇÃO DE PAGAMENTO S/A	1				533	bcb
+iban-br	27098060	Banco Digio S.A.	1				335	bcb
 iban-ch	00202	UBS Switzerland AG	1	UBSWCHZH86N				schwifty-generated
 iban-ch	00203	UBS Switzerland AG	1	UBSWCHZH93A				schwifty-generated
 iban-ch	00204	UBS Switzerland AG	1	UBSWCHZH70E				schwifty-generated
@@ -657,7 +654,6 @@ iban-cz	2100	ČSOB Hypoteční banka, a.s.	1					schwifty-generated
 iban-cz	2200	Peněžní dům, spořitelní družstvo	1					schwifty-generated
 iban-cz	2220	Artesa, spořitelní družstvo	1	ARTTCZPP				schwifty-generated
 iban-cz	2250	Banka CREDITAS a.s.	1	CTASCZ22				schwifty-generated
-iban-cz	2600	Citibank Europe plc, organizační složka	1	CITICZPX				schwifty-generated
 iban-cz	2700	UniCredit Bank Czech Republic and Slovakia, a.s.	1	BACXCZPP				schwifty-generated
 iban-cz	3030	Air Bank a.s.	1	AIRACZPP				schwifty-generated
 iban-cz	3060	PKO BP S.A., Czech Branch	1	BPKOCZPP				schwifty-generated
@@ -817,9 +813,12 @@ iban-ee	10	AS SEB Pank	1	EEUHEE2X				schwifty-generated
 iban-ee	11	Monemon AS	1	MOMNEE22				schwifty-generated
 iban-ee	12	AS Citadele banka Eesti filiaal	1	PARXEE22				schwifty-generated
 iban-ee	15	inHouse Pay AS	1					schwifty-generated
+iban-ee	16	Eesti Pank	0	EPBEEE2X				schwifty-generated
 iban-ee	17	Luminor Bank AS	1	RIKOEE22				schwifty-generated
 iban-ee	22	Swedbank AS	1	HABAEE2X				schwifty-generated
+iban-ee	33	Danske Bank A/S Eesti filiaal (Sampo Pank)	0					schwifty-generated
 iban-ee	42	Coop Pank aktsiaselts	1	EKRDEE22				schwifty-generated
+iban-ee	45	GFC Good Finance Company AS	0					schwifty-generated
 iban-ee	51	OP Corporate Bank plc Eesti filiaal	1	OKOYEE2X				schwifty-generated
 iban-ee	55	Crowdestate AS	1					schwifty-generated
 iban-ee	62	Maaelu Edendamise Hoiu-laenuühistu	1					schwifty-generated
@@ -828,8 +827,8 @@ iban-ee	77	AS LHV Pank	1	LHVBEE22				schwifty-generated
 iban-ee	83	Svenska Handelsbanken AB Eesti filiaal	1	HANDEE22				schwifty-generated
 iban-ee	88	Wallester AS	1	WALLEE22				schwifty-generated
 iban-ee	96	Luminor Bank AS	1	RIKOEE22				schwifty-generated
+iban-ee	99	AS Pocopay	0					schwifty-generated
 iban-es	0003	B. DEPOSITOS	1	BDEPESM1				schwifty-generated
-iban-es	0011	ALLFUNDS BANK	1	ALLFESMM				schwifty-generated
 iban-es	0019	DB-S.A.E.	1	DEUTESBB				schwifty-generated
 iban-es	0036	SANTANDER INV.	1	SABNESMM				schwifty-generated
 iban-es	0038	SANTANDER SECUR	1	TOTAPTPL				schwifty-generated
@@ -860,9 +859,7 @@ iban-es	0136	ARESBANK	1	AREBESMM				schwifty-generated
 iban-es	0138	BANKOA	1	BKOAES22				schwifty-generated
 iban-es	0144	BNP PARIB.SEC	1	PARBESMX				schwifty-generated
 iban-es	0145	DB-A.G., S.E.	1	DEUTESM1				schwifty-generated
-iban-es	0148	CHASE MANHATTAN	1					schwifty-generated
 iban-es	0149	BNP PARIBAS S.A	1	BNPAESMS				schwifty-generated
-iban-es	0151	JPMORGAN CHASE	1	CHASESM3				schwifty-generated
 iban-es	0152	BARCLAYS, S.E.	1	BPLCESMM				schwifty-generated
 iban-es	0154	CREDIT AGRICOLE	1	BSUIESMM				schwifty-generated
 iban-es	0155	BANCO DO BRASIL	1	BRASESMM				schwifty-generated
@@ -888,6 +885,9 @@ iban-es	0219	MAROCAINE CO EX	1	BMCEESMM				schwifty-generated
 iban-es	0220	FINANTIA	1	FIOFESM1				schwifty-generated
 iban-es	0224	S. CONSUMER F.	1	SCFBESMM				schwifty-generated
 iban-es	0225	BANCO CETELEM	1	FIEIESM1				schwifty-generated
+iban-es	0226	UBS BANK	1	UBSWESMM				schwifty-generated
+iban-es	0227	UNO-E	1	UNOEESM1				schwifty-generated
+iban-es	0229	WIZINK BANK, S.	1	POPLESMM				schwifty-generated
 iban-fi	100	NORDEA BANK FINLAND PLC	1	NDEAFIHH				schwifty-generated
 iban-fi	101	NORDEA BANK FINLAND PLC	1	NDEAFIHH				schwifty-generated
 iban-fi	102	NORDEA BANK FINLAND PLC	1	NDEAFIHH				schwifty-generated
@@ -1024,12 +1024,10 @@ iban-gb	BSCH	BANCO SANTANDER S.A.	2	BSCHGB2LXXX				schwifty-generated
 iban-gb	BUCK	BUCKINGHAMSHIRE BUILDING SOCIETY	2	BUCKGB2CXXX				schwifty-generated
 iban-gb	BUKB	BARCLAYS BANK UK PLC	2	BUKBGB22XXX				schwifty-generated
 iban-gb	CAFB	CAF BANK LIMITED	2	CAFBGB2MXXX				schwifty-generated
-iban-gb	CHAS	JPMORGAN CHASE BANK, N.A	6	CHASGB2LXXX				schwifty-manual
 iban-gb	CHOR	THE CHORLEY AND DISTRICT BUILDING SOCIETY	2	CHORGB22XXX				schwifty-generated
 iban-gb	CIBC	Canadian Imperial Bank of Commerce	2	CIBCGB2LXXX				schwifty-generated
 iban-gb	CIIV	Allica Bank Limited	2	CIIVGB2AXXX				schwifty-generated
 iban-gb	CITI	CITIBANK N.A.	4	CITIGB2L				schwifty-manual
-iban-gb	CITT	CITIBANK EUROPE PUBLIC LIMITED COMPANY	2	CITTGB2LXXX				schwifty-generated
 iban-gb	CLYD	CLYDESDALE BANK PLC	5	CLYDGB2S				schwifty-manual
 iban-gb	CMBG	CAMBRIDGE BUILDING SOCIETY	2	CMBGGB22XXX				schwifty-generated
 iban-gb	CMBS	CUMBERLAND BUILDING SOCIETY	2	CMBSGB2AXXX				schwifty-generated
@@ -1053,38 +1051,47 @@ iban-gb	HBZU	HABIB BANK ZURICH PLC	2	HBZUGB2LXXX				schwifty-generated
 iban-gb	HEBS	HANLEY ECONOMIC BUILDING SOCIETY	2	HEBSGB22XXX				schwifty-generated
 iban-gb	HLBA	TANDEM BANK LIMITED	2	HLBAGB2LXXX				schwifty-generated
 iban-gb	HLFX	BANK OF SCOTLAND PLC	2	HLFXGB22XXX				schwifty-generated
+iban-gb	HRBS	HINCKLEY AND RUGBY BUILDING SOCIETY	2	HRBSGB22XXX				schwifty-generated
+iban-gb	HTPL	HAMPSHIRE TRUST BANK PLC	2	HTPLGB2LXXX				schwifty-generated
 iban-gb	INGB	ING BANK N.V.	3	INGBGB22XXX				schwifty-generated
+iban-gb	IVES	INVESTEC BANK PLC	2	IVESGB2LXXX				schwifty-generated
+iban-gb	JHBA	JULIAN HODGE BANK LIMITED	2	JHBAGB22XXX				schwifty-generated
 iban-gb	LEED	LEEDS BUILDING SOCIETY	4	LEEDGB21XXX				schwifty-generated
 iban-gb	LOYD	LLOYDS BANK PLC	7	LOYDGB2L				schwifty-manual
-iban-gb	MELN	The Bank of New York Mellon	3	MELNGB2CXXX				schwifty-generated
 iban-gb	MIDL	HSBC BANK PLC	5	MIDLGB22XXX				schwifty-manual
 iban-gb	MLIB	BANK OF AMERICA EUROPE DESIGNATED ACTIVITY COMPANY	5	MLIBGB2JXXX				schwifty-generated
 iban-gb	NTBS	NOTTINGHAM BUILDING SOCIETY	3	NTBSGB2NXXX				schwifty-generated
 iban-gb	NWBK	NATIONAL WESTMINSTER BANK PUBLIC LIMITED COMPANY	10	NWBKGB2LXXX				schwifty-manual
 iban-gb	PNBP	WELLS FARGO BANK	3	PNBPGB2L				schwifty-manual
 iban-gb	RBOS	THE ROYAL BANK OF SCOTLAND PUBLIC LIMITED COMPANY	10	RBOSGB2LXXX				schwifty-manual
-iban-gb	SBOS	STATE STREET BANK AND TRUST COMPANY	3	SBOSGB2XXXX				schwifty-generated
 iban-gb	SRLG	STARLING BANK LIMITED	3	SRLGGB3L				schwifty-manual
 iban-gb	TDOM	THE TORONTO-DOMINION BANK	4	TDOMGB2EXXX				schwifty-generated
 iban-gb	UYTB	UNITY TRUST BANK PLC	3	UYTBGB22XXX				schwifty-generated
 iban-gb	WWLL	SHAWBROOK BANK LIMITED	3	WWLLGB21XXX				schwifty-generated
+iban-ge	AZ	International Bank of Azerbaijan	0					schwifty-generated
 iban-ge	BC	JSC “Microbank Crystal”	1	BCRYGE22				schwifty-generated
 iban-ge	BG	JSC "Bank of Georgia"	1	BAGAGE22				schwifty-generated
+iban-ge	BR	TBC Bank Temporary Code	0					schwifty-generated
 iban-ge	BS	JSC "BasisBank"	1	CBASGE22				schwifty-generated
 iban-ge	BT	JSC "Silk Bank"	1	DISNGE22				schwifty-generated
 iban-ge	CD	JSC "Credo Bank"	1	JSCRGE22				schwifty-generated
 iban-ge	CR	JSC "Cartu Bank"	1	CRTUGE22				schwifty-generated
+iban-ge	CS	Caucasus Development Bank	0					schwifty-generated
 iban-ge	HB	JSC "Halyk Bank Georgia"	1	HABGGE22				schwifty-generated
 iban-ge	HS	JSC "HASH Bank"	1	HAJSGE22				schwifty-generated
+iban-ge	IN	Capital Bank	0					schwifty-generated
 iban-ge	IS	JSC "Isbank Georgia"	1	ISBKGE22				schwifty-generated
 iban-ge	KS	JSC "Terabank"	1	TEBAGE22				schwifty-generated
 iban-ge	LB	JSC "Liberty Bank"	1	LBRTGE22				schwifty-generated
 iban-ge	MB	JSC "Microbank MBC"	1	MOMBGE22				schwifty-generated
+iban-ge	NB	National Bank of Georgia	0	BNLNGE22				schwifty-generated
 iban-ge	PB	JSC “Pasha Bank Georgia”	1	PAHAGE22				schwifty-generated
 iban-ge	PC	JSC "ProCredit Bank"	1	MIBGGE22				schwifty-generated
+iban-ge	PG	Progress Bank	0					schwifty-generated
 iban-ge	PS	JSC "Paysera Bank Georgia"	1	PSRAGE22				schwifty-generated
 iban-ge	PV	JSC "Pave Bank Georgia"	1	PAVEGE22				schwifty-generated
 iban-ge	TB	JSC "TBC Bank"	1	TBCBGE22				schwifty-generated
+iban-ge	TR	State Treasury	0	TRESGE22				schwifty-generated
 iban-ge	VT	JSC "VTB Bank Georgia "	1	UGEBGE22				schwifty-generated
 iban-ge	ZB	JSC "Ziraat Bank Georgia"	1	TCZBGE22				schwifty-generated
 iban-gg	ASBG	Bank Aston Limited	1	ASBGGGSPXXX				gleif
@@ -1121,7 +1128,6 @@ iban-gr	069	COOPERATIVE BANK OF CHANIA	1	STXAGRA1				schwifty-manual
 iban-gr	071	HSBC CONTINENTAL EUROPE GREECE	1	MIDLGRAAXXX				schwifty-manual
 iban-gr	072	UNICREDIT BANK AG (HYPOVEREINSBANK) ATHENS	1	HYVEGRAAXXX				schwifty-manual
 iban-gr	081	BANK OF AMERICA EUROPE DESIGNATED ACTIVITY COMPANY	1	BOFAGR2XXXX				schwifty-manual
-iban-gr	084	CITIBANK EUROPE PLC (CEP)	1	CITIGRAAXXX				schwifty-manual
 iban-gr	087	PANCRETA BANK	1	STPGGRAA				schwifty-manual
 iban-gr	088	COOPERATIVE BANK OF DRAMA	1	STEOGR21XXX				schwifty-manual
 iban-gr	089	COOPERATIVE BANK OF KARDITSA	1	STKAGRA1				schwifty-manual
@@ -1134,6 +1140,7 @@ iban-hn	BGAH	BANCO DAVIVIENDA HONDURAS SOCIEDAD ANONIMA	1	BGAHHNTEXXX				gleif
 iban-hn	FCOH	Banco Financiera Comercial Hondurena S.A.	1	FCOHHNTEXXX				gleif
 iban-hn	HONA	BANCO DE HONDURAS S.A.	1	HONAHNT2XXX				gleif
 iban-hn	PISA	BANCO DEL PAIS, SOCIEDAD ANONIMA	1	PISAHNTEXXX				gleif
+iban-hr	1001005	HRVATSKA NARODNA BANKA	0	NBHRHR2X				schwifty-generated
 iban-hr	2340009	PRIVREDNA BANKA ZAGREB d.d. Zagreb	1	PBZGHR2X				schwifty-generated
 iban-hr	2360000	ZAGREBAČKA BANKA d.d. Zagreb	1	ZABAHR2X				schwifty-generated
 iban-hr	2380006	ISTARSKA KREDITNA BANKA UMAG d.d. Umag	1	ISKBHR2X				schwifty-generated
@@ -1151,7 +1158,9 @@ iban-hr	2485003	CROATIA BANKA d.d. Zagreb	1	CROAHR2X				schwifty-generated
 iban-hr	2488001	BKS BANK AG, Glavna podružnica Hrvatska	1	BFKKHR22				schwifty-generated
 iban-hr	2489004	J&T banka d.d. Varaždin	1	VBVZHR22				schwifty-generated
 iban-hr	2492008	IMEX BANKA d.d. Split	1	IMXXHR22				schwifty-generated
+iban-hr	2493003	HRVATSKA BANKA ZA OBNOVU I RAZVITAK Zagreb	0					schwifty-generated
 iban-hr	2500009	ADDIKO BANK d.d. Zagreb	1	HAABHR22				schwifty-generated
+iban-hr	2503007	NOVA HRVATSKA BANKA d.d., Zagreb	0					schwifty-generated
 iban-hr	4124003	KENTBANK d.d. Zagreb	1	KENBHR22				schwifty-generated
 iban-hr	4133006	BANKA KOVANICA d.d. Varaždin	1	SKOVHR22				schwifty-generated
 iban-hr	4501006	AIRCASH d.o.o. Zagreb	1					schwifty-generated
@@ -1161,7 +1170,6 @@ iban-hu	102	K&H Bank Zrt. 242 Pécs	1	OKHBHUHB				schwifty-generated
 iban-hu	103	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
 iban-hu	104	K&H Bank Zrt. 002 Budapest	1	OKHBHUHB				schwifty-generated
 iban-hu	107	CIB Bank Zrt. Központ	1	CIBHHUHB				schwifty-generated
-iban-hu	108	Citibank Europe Plc. Mo-i Fióktelepe	1	CITIHUHX				schwifty-generated
 iban-hu	109	UniCredit Bank Hungary Zrt.	1	BACXHUHB				schwifty-generated
 iban-hu	111	CIB Bank Zrt. Szabadság téri Fiók	1	CIBHHUHB				schwifty-generated
 iban-hu	115	MBH Befektetési Bank Zrt. Központ	1	TAKBHUHB				schwifty-generated
@@ -1215,6 +1223,7 @@ iban-hu	501	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
 iban-hu	503	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
 iban-hu	504	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
 iban-hu	507	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
+iban-hu	508	MBH Bank Nyrt.	1	MKKBHUHB				schwifty-generated
 iban-ie	AARB	Aareal Bank AG	1	AARBIE21XXX				gleif
 iban-ie	ABRN	People First Credit Union Limited	1	ABRNIE21XXX				gleif
 iban-ie	ABRU	Abbeyfeale Credit Union Limited	1	ABRUIE21XXX				gleif
@@ -1263,7 +1272,6 @@ iban-ie	BLRN	Ballincollig Credit Union Limited	1	BLRNIE21XXX				gleif
 iban-ie	BLTN	Ballygall Credit Union Limited	1	BLTNIE21XXX				gleif
 iban-ie	BLTO	Ballyconnell Credit Union Limited	1	BLTOIE21XXX				gleif
 iban-ie	BNRU	Bantry Credit Union Limited	1	BNRUIE21XXX				gleif
-iban-ie	BNYM	THE BANK OF NEW YORK MELLON SA/NV - DUBLIN BRANCH	1	BNYMIE2DXXX				gleif
 iban-ie	BOFA	Bank of America Europe Designated Activity Company	1	BOFAIE3XXXX				schwifty-manual
 iban-ie	BOFI	Bank Of Ireland	2	BOFIIE2D				schwifty-manual
 iban-ie	BOFM	Bank of Montreal	1	BOFMIE2DXXX				schwifty-manual
@@ -1275,6 +1283,7 @@ iban-ie	BRRO	Bruff Credit Union Limited	1	BRROIE21XXX				gleif
 iban-ie	BRRU	East Coast Credit Union Limited	1	BRRUIE21XXX				gleif
 iban-ie	BUNQ	bunq B.V.	1	BUNQIE22XXX				schwifty-manual
 iban-ie	BURU	Inishowen Credit Union Limited	1	BURUIE21XXX				gleif
+iban-ie	CAHM	CAIXABANK SA	1	CAHMIE21XXX				gleif
 iban-il	020	Mizrahi Tefahot Bank Ltd	1	MIZBILIT				schwifty-manual
 iban-im	BARC	BARCLAYS BANK PLC	1	BARCIMD1XXX				gleif
 iban-im	BFIM	BARCLAYS PRIVATE CLIENTS INTERNATIONAL LIMITED	1	BFIMIMD1XXX				gleif
@@ -1327,7 +1336,6 @@ iban-it	03048	BANCA DEL PIEMONTE S.P.A.	1	BDCPITTT				schwifty-generated
 iban-it	03051	BARCLAYS BANK IRELAND PUBLIC LIMITED COMPANY	1	BARCITMM				schwifty-generated
 iban-it	03055	BAYERISCHE LANDESBANK	1					schwifty-generated
 iban-it	03058	MEDIOBANCA PREMIER S.P.A.	1	MICSITM1				schwifty-generated
-iban-it	03061	CITIBANK EUROPE PLC	1					schwifty-generated
 iban-it	03062	BANCA MEDIOLANUM S.P.A.	1	MEDBITMM				schwifty-generated
 iban-it	03069	INTESA SANPAOLO S.P.A.	1	BCITITMM				schwifty-generated
 iban-it	03073	BHW BAUSPARKASSE AG	1					schwifty-generated
@@ -1359,6 +1367,7 @@ iban-it	03211	BPS S.P.A.	1	SENVITT1				schwifty-generated
 iban-it	03227	CNH INDUSTRIAL CAPITAL EUROPE	1					schwifty-generated
 iban-it	03235	BANCA DI SCONTO S.P.A.	1	SCCDIT31				schwifty-generated
 iban-it	03239	INTESA SANPAOLO PRIVATE BANKING S.P.A.	1	BCITITM3				schwifty-generated
+iban-it	03242	BANCO DI LUCCA S.P.A.	1	BLUCIT31				schwifty-generated
 iban-it	03442	WISE DIALOG BANK S.P.A.	2					schwifty-generated
 iban-it	03576	BANCO BILBAO VIZCAYA ARGENTARIA S.A.	2					schwifty-generated
 iban-it	07066	BANCA DI CREDITO COOPERATIVO MAGNA GRECIA - SOCIETA' COOPERATIVA	2					schwifty-generated
@@ -1373,7 +1382,6 @@ iban-it	32532	MOONEY S.P.A.	2					schwifty-generated
 iban-it	36003	FLOWE S.P.A. - SOCIETA' BENEFIT	2					schwifty-generated
 iban-je	ANIL	SANTANDER FINANCIAL SERVICES PLC	1	ANILJESHXXX				gleif
 iban-je	BARC	BARCLAYS BANK PLC	1	BARCJESAXXX				gleif
-iban-je	CHAS	JPMorgan Chase Bank, National Association	1	CHASJESXXXX				gleif
 iban-je	CITI	Citibank, National Association	1	CITIJESXXXX				gleif
 iban-je	EFGB	EFG PRIVATE BANK LIMITED, JERSEY BRANCH	1	EFGBJESHXXX				gleif
 iban-je	HAMB	UNION BANCAIRE PRIVEE (UK) LIMITED	1	HAMBJESXXXX				gleif
@@ -1493,6 +1501,7 @@ iban-li	30290	Bank Frick AG	1	BFRILI22XXX				schwifty-generated
 iban-li	30291	SIGMA Bank AG	1	VOAGLI22XXX				schwifty-generated
 iban-li	83047	Amnis Europe AG	1	AMNSLI22XXX				schwifty-generated
 iban-li	83049	Banking Circle (Liechtenstein) AG	1	BCIRLI22XXX				schwifty-generated
+iban-li	83053	RMS Sicherheits-Anstalt	0					schwifty-generated
 iban-li	83061	Celsion Bank AG	1	CLNCLI22XXX				schwifty-generated
 iban-lt	00758	Lietuvos banko sąskaita BAB SNORAS įmokoms surinkti	1	LIABLT2XSNO				schwifty-generated
 iban-lt	10110	Lietuvos banko padalinys	2	LIABLT2XCON				schwifty-generated
@@ -1572,7 +1581,6 @@ iban-lu	060	SG	1	SGABLU2S				schwifty-manual
 iban-lu	061	SG	1	SGABLULL				schwifty-manual
 iban-lu	062	HAUCK	1	HAUKLULL				schwifty-manual
 iban-lu	064	SEB	1	ESSELULL				schwifty-manual
-iban-lu	067	J.P. Morgan	1	CHASLULX				schwifty-manual
 iban-lu	070	UBS	1	UBSWLULL				schwifty-manual
 iban-lu	077	MUG	1	MUGCLULL				schwifty-manual
 iban-lu	078	CS	1	CRESLULL				schwifty-manual
@@ -1608,26 +1616,46 @@ iban-lu	183	VPB	1	VPBVLULL				schwifty-manual
 iban-lu	193	BTL	1	CMCILUL1				schwifty-manual
 iban-lu	197	NATIXIS	1	NATXLULL				schwifty-manual
 iban-lu	198	Pictet	1	PICTLULX				schwifty-manual
-iban-lu	204	Nomura	1	NBLXLULL				schwifty-manual
 iban-lu	222	BOC	1	BKCHLULA				schwifty-manual
 iban-lu	229	SHB	1	HANDLULB				schwifty-manual
 iban-lu	250	JPM	1	CHASLULW				schwifty-manual
 iban-lu	259	DBAG	1	DEUTLULB				schwifty-manual
 iban-lu	265	DBAG	1	PBNKLULL				schwifty-manual
+iban-lu	281	FIS	1	FISPLU22				schwifty-manual
+iban-lu	284	HAVILLAND	1	HAVLLULL				schwifty-manual
 iban-lv	AIZK	ABLV Bank, AS	1	AIZKLV22XXX				gleif
+iban-lv	AOSA	AP OPERATIONS SIA	0	AOSALV22XXX				schwifty-generated
 iban-lv	BIGK	BIGBANK AS	1	BIGKLV21XXX				gleif
+iban-lv	BLIB	AKCIJU SABIEDRĪBA "BALTIC INTERNATIONAL BANK"	0					schwifty-generated
 iban-lv	CBBR	BLUEOR BANK AS	1	CBBRLV22XXX				schwifty-generated
 iban-lv	HABA	"SWEDBANK", AS	1	HABALV22XXX				schwifty-generated
+iban-lv	HAND	SVENSKA HANDELSBANKEN AB LATVIJAS FILIĀLE	0					schwifty-generated
 iban-lv	IDXO	INDEXO BANKA	1	IDXOLV22XXX				schwifty-generated
+iban-lv	IIPA	SIA Pace FS	0	IIPALV22XXX				schwifty-generated
+iban-lv	IRCA	RENESOURCE CAPITAL	0					schwifty-generated
+iban-lv	LACB	LATVIJAS BANKA	0	LACBLV2XXXX				schwifty-generated
 iban-lv	LAPB	AS MAGNETIQ BANK	1	LAPBLV2XXXX				schwifty-generated
+iban-lv	LATB	AS "PNB BANKA"	0					schwifty-generated
+iban-lv	LATC	AS EXPOBANK	0					schwifty-generated
 iban-lv	LAVF	Avarda Bank AB	1	LAVFLV22XXX				gleif
+iban-lv	LKJF	LATVIJAS TIRDZNIECĪBAS FLOTES JŪRNIEKU ARODBIEDRĪBAS KOOPERATĪVĀ KRĀJAIZDEVU SABIEDRĪBA "JŪRNIEKU FORUMS"	0					schwifty-generated
 iban-lv	LLBB	SIGNET BANK AS	1	LLBBLV2XXXX				schwifty-generated
+iban-lv	LPNS	VALSTS AKCIJU SABIEDRĪBA "LATVIJAS PASTS"	0	LPNSLV21XXX				schwifty-generated
+iban-lv	MARA	DANSKE BANK A/S FILIĀLE LATVIJĀ	0					schwifty-generated
 iban-lv	MULT	AS "INDUSTRA BANK"	1	MULTLV2XXXX				schwifty-generated
+iban-lv	NDEA	LUMINOR BANK AS	0					schwifty-generated
 iban-lv	OKOY	OP CORPORATE BANK PLC FILIĀLE LATVIJĀ	1	OKOYLV2XXXX				schwifty-generated
 iban-lv	PARX	AKCIJU SABIEDRĪBA "CITADELE BANKA"	1	PARXLV22XXX				schwifty-generated
+iban-lv	PRTT	AS "PRIVATBANK"	0					schwifty-generated
+iban-lv	PYSI	GR8 PAY SIA	0	PYSILV22XXX				schwifty-generated
+iban-lv	RGNS	RIGENSIS BANK AS	0					schwifty-generated
 iban-lv	RIBR	AKCIJU SABIEDRĪBA "REĢIONĀLĀ INVESTĪCIJU BANKA"	1	RIBRLV22XXX				schwifty-generated
 iban-lv	RIKO	LUMINOR BANK AS	1	RIKOLV2XXXX				schwifty-generated
 iban-lv	RTMB	AKCIJU SABIEDRĪBA "RIETUMU BANKA"	1	RTMBLV2XXXX				schwifty-generated
+iban-lv	SIAX	xpate SIA	0	SIAXLV22XXX				schwifty-generated
+iban-lv	TGSI	TigSiPay SIA	0	TGSILV22XXX				schwifty-generated
+iban-lv	TREL	VALSTS KASE	0	TRELLV22XXX				schwifty-generated
+iban-lv	TRSF	SABIEDRĪBA AR IEROBEŽOTU ATBILDĪBU "TRANSFERTA"	0					schwifty-generated
 iban-lv	UNLA	AS "SEB BANKA"	1	UNLALV2XXXX				schwifty-generated
 iban-mc	30003	SOCIETE GENERALE FONTVIEILLE	1	SOGEMCM1				schwifty-manual
 iban-md	AG	MAIB	1	AGRNMD2X				schwifty-manual
@@ -1702,7 +1730,6 @@ iban-nl	BKCH	BANK OF CHINA	1	BKCHNL2R				schwifty-generated
 iban-nl	BKMG	BANK MENDES GANS	1	BKMGNL2A				schwifty-generated
 iban-nl	BNDA	BRAND NEW DAY BANK	1	BNDANL2A				schwifty-generated
 iban-nl	BNGH	BANK NEDERLANDSE GEMEENTEN	1	BNGHNL2G				schwifty-generated
-iban-nl	BNYM	THE BANK OF NEW YORK MELLON SA/NV – AMSTERDAM BRANCH	1	BNYMNL22XXX				gleif
 iban-nl	BOFA	BANK OF AMERICA	1	BOFANLNX				schwifty-generated
 iban-nl	BOFS	BANK OF SCOTLAND, Amsterdam	1	BOFSNL21002				schwifty-generated
 iban-nl	BOTK	MUFG BANK	1	BOTKNL2X				schwifty-generated
@@ -1724,7 +1751,6 @@ iban-nl	FBHL	NEXENT BANK N.V.	1	FBHLNL2A				schwifty-generated
 iban-nl	FCEE	FCE BANK PLC	1	FCEENL21XXX				gleif
 iban-nl	FXDG	FLATEXDEGIRO BANK DUTCH BRANCH	1	FXDGNL2A				schwifty-generated
 iban-nl	GILL	Quintet Private Bank (Europe) S.A.	1	GILLNL2AXXX				gleif
-iban-nl	GOLD	GOLDMAN SACHS BANK EUROPE SE, AMSTERDAM BRANCH	1	GOLDNL2A				schwifty-generated
 iban-nl	HAND	SVENSKA HANDELSBANKEN	1	HANDNL2A				schwifty-generated
 iban-nl	HIQA	flatexDEGIRO Bank Dutch Branch	1	HIQANL21XXX				gleif
 iban-nl	HSBC	HSBC BANK	1	HSBCNL2A				schwifty-generated
@@ -1738,7 +1764,6 @@ iban-nl	KOEX	KEB HANA BANK	1	KOEXNL2A				schwifty-generated
 iban-nl	KRED	KBC BANK	1	KREDNL2X				schwifty-generated
 iban-nl	LOYD	LLOYDS BANK GmbH	1	LOYDNL22				schwifty-generated
 iban-nl	LPLN	Ayvens Bank N.V.	1	LPLNNL2FXXX				gleif
-iban-nl	MHCB	MIZUHO BANK EUROPE NV	1	MHCBNL2A				schwifty-generated
 iban-nl	NNBA	NATIONALE-NEDERLANDEN BANK	1	NNBANL2G				schwifty-generated
 iban-nl	NOCU	Norinchukin Bank Europe N.V.	1	NOCUNL2AXXX				gleif
 iban-nl	NWAB	NEDERLANDSE WATERSCHAPSBANK	1	NWABNL2G				schwifty-generated
@@ -1747,7 +1772,10 @@ iban-nl	RABO	RABOBANK	1	RABONL2U				schwifty-generated
 iban-nl	RBRB	REGIOBANK	1	RBRBNL21				schwifty-generated
 iban-nl	REVO	REVOLUT BANK UAB	1	REVONL22				schwifty-generated
 iban-nl	SBNL	N.V. Settlement Bank of the Netherlands	1	SBNLNL2AXXX				gleif
-iban-nl	SBOS	STATE STREET BANK INTERNATIONAL GbmH	1	SBOSNL2A				schwifty-generated
+iban-nl	SNSB	ASN BANK	1	SNSBNL2A				schwifty-generated
+iban-nl	SWHQ	SOCIETY FOR WORLDWIDE INTERBANK FINANCIAL TELECOMMUNICATION	1	SWHQNLNLXXX				gleif
+iban-nl	TECT	Bank Ten Cate & Cie. N.V.	1	TECTNL21XXX				gleif
+iban-nl	TRBK	TRADE REPUBLIC BANK GmbH, Netherlands Branch	1	TRBKNL2A				schwifty-generated
 iban-no	0500	DNB Bank ASA	1	DNBANOKK				schwifty-generated
 iban-no	0519	DNB Bank ASA	1	DNBANOKK				schwifty-generated
 iban-no	0520	DNB Bank ASA	1	DNBANOKK				schwifty-generated
@@ -1946,7 +1974,6 @@ iban-pt	0098	CAIXA DE CRÉDITO AGRÍCOLA MÚTUO DE BOMBARRAL, CRL	1	CERTPTP1XXX	
 iban-pt	0112	ESPIRITO S.A.NTO BANK OF FLORIDA	1	BESCPTPLXXX				schwifty-manual
 iban-pt	0151	FINANCEIRA EL CORTE INGLÉS PORTUGAL, S.F.C., S.A.	1	CGDIPTPLXXX				schwifty-manual
 iban-pt	0160	NOVO BANCO DOS AÇORES, S.A.	1	BESAPTPAXXX				schwifty-manual
-iban-pt	0169	CITIBANK EUROPE PLC	1	CITIPTPXXXX				schwifty-manual
 iban-pt	0170	ABANCA CORPORACIÓN BANCARIA, S.A.	1	CAGLPTPLXXX				schwifty-manual
 iban-pt	0173	EDMOND DE ROTHSCHILD EUROPE	1	PRIBPTPXXXX				schwifty-manual
 iban-pt	0185	DEXIA CRÉDIT LOCAL S.A.	1	DSBLPTPLXXX				schwifty-manual
@@ -1965,6 +1992,7 @@ iban-pt	0272	WIZINK	1	WZNKPTPLXXX				schwifty-manual
 iban-pt	0275	BANCO DE SABADELL, S.A.	1	BSABPTPLXXX				schwifty-manual
 iban-pt	0280	EFG BANK (LUXEMBOURG) S.A.	1	BKCHPTPL				schwifty-manual
 iban-pt	0305	321CRÉDITO, INSTITUIÇÃO FINANCEIRA DE CRÉDITO S.A.	1	BPNPPTPLXXX				schwifty-manual
+iban-pt	0307	FORTIS LEASE PORTUGAL - SOCIEDADE FINANCEIRA DE CRÉDITO, S.A.	1	BNPAPTPLXXX				schwifty-manual
 iban-qa	ABDI	Abu Dhabi Islamic Bank	1	ABDIQAQAXXX				gleif
 iban-qa	ABQQ	Ahli Bank (Q.P.S.C)	1	ABQQQAQAXXX				gleif
 iban-qa	ARAB	ARAB BANK PLC	1	ARABQAQAXXX				gleif
@@ -1996,7 +2024,6 @@ iban-ro	BRMA	EXIM BANCA ROMÂNEASCĂ S.A.	1	BRMAROBUXXX				schwifty-generated
 iban-ro	BTRL	Banca Transilvania SA	1	BTRLRO22XXX				schwifty-generated
 iban-ro	CARP	PATRIA BANK S.A.	1	CARPRO22XXX				schwifty-generated
 iban-ro	CECE	CEC BANK SA	1	CECEROBUXXX				schwifty-generated
-iban-ro	CITI	CITIBANK EUROPE PUBLIC LIMITED COMPANY	1	CITIROBUXXX				schwifty-generated
 iban-ro	CRCO	BANCA CENTRALA COOPERATISTA CREDITCOOP	1	CRCOROBUXXX				schwifty-generated
 iban-ro	EGNA	VISTA BANK (ROMANIA) S.A.	1	EGNAROBXXXX				schwifty-generated
 iban-ro	INGB	ING BANK N.V.	1	INGBROBUXXX				schwifty-generated
@@ -2092,8 +2119,13 @@ iban-ru	040813608	ДАЛЬНЕВОСТОЧНЫЙ БАНК ПАО СБЕРБАН�
 iban-ru	040813713	ФИЛИАЛ № 2754 БАНКА ВТБ (ПАО)	1					cbr
 iban-ru	040813727	ФИЛИАЛ БАНКА ВТБ (ПАО) В Г. ХАБАРОВСКЕ	1					cbr
 iban-se	120	Danske Bank	1	DABASESX				schwifty-generated
+iban-se	211	Juni Technology AB	0	JUNTSEGG				schwifty-generated
+iban-se	212	Steven AB	0	SVVVSESS				schwifty-generated
+iban-se	213	Zimpler AB	0	ZIMPSES2				schwifty-generated
+iban-se	214	Trustly Group AB	0	TRLYSESS				schwifty-generated
 iban-se	215	Revolut Bank UAB	1	REVOSESS				schwifty-generated
 iban-se	216	Trade Republic Bank	1					schwifty-generated
+iban-se	217	PPRO Payment Services SA	0	PPPVLUL2				schwifty-generated
 iban-se	218	Stripe	1	STTOIE22				schwifty-generated
 iban-se	230	Ålandsbanken	1	AABASESS				schwifty-generated
 iban-se	300	Nordea	1	NDEASESS				schwifty-generated
@@ -2101,7 +2133,7 @@ iban-se	500	SEB	1	ESSESESS				schwifty-generated
 iban-se	600	Handelsbanken	1	HANDSESS				schwifty-generated
 iban-se	800	Swedbank	1	SWEDSESS				schwifty-generated
 iban-se	902	Länsförsäkringar Bank	1	ELLFSESS				schwifty-generated
-iban-se	904	Citibank Europe plc ( Sweden Branch)	1	CITISESX				schwifty-generated
+iban-se	904	Citibank Europe plc ( Sweden Branch)	0	CITISESX				schwifty-generated
 iban-se	907	Multitude Bank plc.	1	FEMAMTMT				schwifty-generated
 iban-se	910	Nordnet Bank	1	NNSESE22				schwifty-generated
 iban-se	915	Skandiabanken	1	SKIASESS				schwifty-generated
@@ -2133,10 +2165,15 @@ iban-se	970	Ekobanken	1	EKMLSE2S				schwifty-generated
 iban-se	971	Lunar Bank	1	LUNADK2B				schwifty-generated
 iban-se	975	Northmill AB	1	NOHLSESS				schwifty-generated
 iban-se	978	Klarna Bank	1	KLRNSESS				schwifty-generated
+iban-si	01	BANKA SLOVENIJE	0	BSLJSI2XXXX				schwifty-generated
 iban-si	02	NLB D.D.	349	LJBASI2XXXX				schwifty-generated
+iban-si	03	OTP BANKA D.D.	0					schwifty-generated
 iban-si	04	OTP BANKA D.D.	136	KBMASI2XXXX				schwifty-generated
+iban-si	05	OTP BANKA D.D.	0					schwifty-generated
+iban-si	06	OTP BANKA D.D.	0					schwifty-generated
 iban-si	07	GORENJSKA BANKA D.D., KRANJ	38	GORESI2XXXX				schwifty-generated
 iban-si	10	BANKA INTESA SANPAOLO D.D.	2	BAKOSI2XXXX				schwifty-generated
+iban-si	19	DEZELNA BANKA SLOVENIJE D.D.	0	SZKBSI2XXXX				schwifty-generated
 iban-si	29	UNICREDIT BANKA SLOVENIJA D.D.	1	BACXSI22XXX				schwifty-generated
 iban-si	30	NLB D.D.	2	LJBASI2XXXX				schwifty-generated
 iban-si	33	ADDIKO BANK D.D.	1	HAABSI22XXX				schwifty-generated
@@ -2150,6 +2187,7 @@ iban-si	79	KDD-CENTRALNA KLIRINŠKO DEPOTNA DRUŽBA, D.O.O.	1	KDDSSI22XXX				sch
 iban-si	91	DINARO D.O.O.	1	PWSRSI22XXX				schwifty-generated
 iban-sk	0200	Všeobecná úverová banka, a.s.	1	SUBASKBX				schwifty-generated
 iban-sk	0600	MONETA Money Bank, a.s.	1	AGBACZPP				schwifty-generated
+iban-sk	0720	Národná banka Slovenska	0	NBSBSKBX				schwifty-generated
 iban-sk	0900	Slovenská sporiteľňa, a.s.	1	GIBASKBX				schwifty-generated
 iban-sk	1100	Tatra banka, a.s.	1	TATRSKBX				schwifty-generated
 iban-sk	1111	UniCredit Bank Czech Republic and Slovakia, a.s., pobočka zahraničnej banky	1	UNCRSKBX				schwifty-generated
@@ -2158,29 +2196,42 @@ iban-sk	2070	TRINITY BANK a.s.	1	MPUBCZPP				schwifty-generated
 iban-sk	2250	Banka CREDITAS a.s.	1	CTASCZ22				schwifty-generated
 iban-sk	3000	Slovenská záručná a rozvojová banka, a.s.	1	SLZBSKBA				schwifty-generated
 iban-sk	3030	Air bank a.s.	1	AIRACZPP				schwifty-generated
+iban-sk	3100	Prima banka Slovensko, a.s. - Code for running payments	0					schwifty-generated
+iban-sk	4000	Expobank CZ a.s.	0					schwifty-generated
+iban-sk	5200	OTP Banka Slovensko, a.s.	0					schwifty-generated
 iban-sk	5600	Prima banka Slovensko, a.s.	1	KOMASK2X				schwifty-generated
 iban-sk	5800	J&T BANKA, a.s.	1	JTBPCZPP				schwifty-generated
 iban-sk	5900	Prvá stavebná sporiteľňa, a.s.	1	PRVASKBA				schwifty-generated
 iban-sk	6000	PPF banka a.s.	1	PMBPCZPP				schwifty-generated
 iban-sk	6363	Partners Banka, a.s.	1	PTBNCZPP				schwifty-generated
+iban-sk	6500	365.bank, a.s.	0					schwifty-generated
 iban-sk	7300	ING Bank N.V., pobočka zahraničnej banky	1	INGBSKBX				schwifty-generated
 iban-sk	7500	Československá obchodná banka, a.s.	1	CEKOSKBX				schwifty-generated
 iban-sk	7930	Bausparkasse Wüstenrot Aktiengesselschaft, pobočka zahraničnej banky	1	WUSTSKBA				schwifty-generated
+iban-sk	8050	Commerzbank Aktiengesellschaft, pobočka zahraničnej banky, Bratislava	0					schwifty-generated
 iban-sk	8100	Komerční banka, a.s., pobočka zahraničnej banky	1	KOMBSKBA				schwifty-generated
 iban-sk	8120	Penta Bank, a.s.	1	BSLOSK22				schwifty-generated
-iban-sk	8130	Citibank Europe plc, pobočka zahraničnej banky	1	CITISKBA				schwifty-generated
+iban-sk	8130	Citibank Europe plc, pobočka zahraničnej banky	0	CITISKBA				schwifty-generated
 iban-sk	8160	EXIMBANKA SR	1	EXSKSKBX				schwifty-generated
+iban-sk	8170	ČSOB stavebná sporiteľňa, a.s.	0					schwifty-generated
 iban-sk	8180	Štátna pokladnica	1	SPSRSKBA				schwifty-generated
 iban-sk	8191	Centrálny depozitár cenných papierov SR, a.s.	1					schwifty-generated
 iban-sk	8320	J&T BANKA, a.s., pobočka zahraničnej banky	1	JTBPSKBA				schwifty-generated
 iban-sk	8330	Fio banka, a.s., pobočka zahraničnej banky	1	FIOZSKBA				schwifty-generated
 iban-sk	8360	mBank S.A., pobočka zahraničnej banky	1	BREXSKBX				schwifty-generated
 iban-sk	8370	Oberbank AG pobočka zahraničnej banky v Slovenskej republike	1	OBKLSKBA				schwifty-generated
+iban-sk	8390	Československé úvěrní družstvo, pobočka Slovensko	0					schwifty-generated
 iban-sk	8400	COFIDIS SA, pobočka zahraničnej banky	1					schwifty-generated
+iban-sk	8410	ZUNO BANK AG, pobočka zahraničnej banky	0					schwifty-generated
 iban-sk	8420	BKS Bank AG, pobočka zahraničnej banky v SR	1	BFKKSKBB				schwifty-generated
+iban-sk	8430	KDB Bank Europe Ltd., pobočka zahraničnej banky	0					schwifty-generated
+iban-sk	8440	BNP PARIBAS PERSONAL FINANCE SA, pobočka zahraničnej banky	0					schwifty-generated
 iban-sk	8450	PKO BP S.A., pobočka zahraničnej banky	1	BPKOSKBB				schwifty-generated
 iban-sk	9950	Nexi Central Europe, a.s.	1					schwifty-generated
 iban-sk	9952	Trust Pay, a.s.	1	TPAYSKBX				schwifty-generated
+iban-sk	9953	Payment Institution NFD a.s.	0					schwifty-generated
+iban-sk	9954	K-PAY a.s.	0					schwifty-generated
+iban-sk	9955	Unifiedpost Payments, organizačná zložka	0	PANXSK22				schwifty-generated
 iban-sk	9956	Payout a.s.	1	PYYUSK22				schwifty-generated
 iban-sv	BACU	Banco Cuscatlan de El Salvador, S.A.	1	BACUSVSSXXX				gleif
 iban-sv	BSAL	Banco Davivienda Salvadoreno, S.A.	1	BSALSVSSXXX				gleif
@@ -2209,7 +2260,6 @@ iban-tr	00092	Citibank A.Ş.	1	CITITRIX				schwifty-manual
 iban-tr	00094	Bank Mellat	1	BKMTTRIS				schwifty-manual
 iban-tr	00096	Turkish Bank A.Ş.	1	TUBATRIS				schwifty-manual
 iban-tr	00097	Habib Bank Limited	1	HABBTRIS				schwifty-manual
-iban-tr	00098	JPMorgan Chase Bank N.A.	1	CHASTRIS				schwifty-manual
 iban-tr	00099	ING Bank A.Ş.	1	INGBTRIS				schwifty-manual
 iban-tr	00103	Fibabanka A.Ş.	1	FBHLTRIS				schwifty-manual
 iban-tr	00108	Turkland Bank A.Ş.	1	TBNKTRIS				schwifty-manual
@@ -2502,7 +2552,6 @@ kr-bic	ANZBKRSX	AUSTRALIA AND NEW ZEALAND BANKING GROUP LIMITED	1	ANZBKRSXXXX			
 kr-bic	BKCHKRSE	中国银行股份有限公司	1	BKCHKRSEXXX				gleif
 kr-bic	BOFAKR2X	Bank Of America, National Association	1	BOFAKR2XXXX				gleif
 kr-bic	BOTKKRSX	株式会社三菱UFJ銀行	1	BOTKKRSXXXX				gleif
-kr-bic	CHASKRSX	JPMorgan Chase Bank, National Association	1	CHASKRSXXXX				gleif
 kr-bic	CITIKRSX	주식회사 한국씨티은행	1	CITIKRSXXXX				gleif
 kr-bic	CRLYKRSE	CREDIT AGRICOLE CORPORATE AND INVESTMENT BANK	1	CRLYKRSEXXX				gleif
 kr-bic	CZNBKRSE	(주) 국민은행	1	CZNBKRSEXXX				gleif
@@ -2513,7 +2562,6 @@ kr-bic	HSBCKRSE	HONGKONG AND SHANGHAI BANKING CORPORATION LIMITED -THE-	1	HSBCKR
 kr-bic	HVBKKRSE	(주) 우리은행	1	HVBKKRSEXXX				gleif
 kr-bic	IBKOKRSE	중소기업은행	1	IBKOKRSEXXX				gleif
 kr-bic	INGBKRSE	ING BANK N.V.	1	INGBKRSEXXX				gleif
-kr-bic	IRVTKRSX	The Bank of New York Mellon	1	IRVTKRSXXXX				gleif
 kr-bic	JEONKRSE	(주)전북은행	1	JEONKRSEXXX				gleif
 kr-bic	KODBKRSE	한국산업은행	1	KODBKRSEXXX				gleif
 kr-bic	KOEXKRSE	주식회사 하나은행	1	KOEXKRSEXXX				gleif
@@ -2523,7 +2571,6 @@ kr-bic	LOYDKRS1	LLOYDS BANK PLC	1	LOYDKRS1XXX				gleif
 kr-bic	MBTCKRSE	METROPOLITAN BANK & TRUST COMPANY	1	MBTCKRSEXXX				gleif
 kr-bic	MHCBKRSE	주식회사 미즈호은행	1	MHCBKRSEXXX				gleif
 kr-bic	MLCOKRS1	BANK OF AMERICA CORPORATION	1	MLCOKRS1XXX				gleif
-kr-bic	MSBKKRSE	MORGAN STANLEY BANK INTERNATIONAL LIMITED	1	MSBKKRSEXXX				gleif
 kr-bic	NACFKRSE	농협은행 주식회사	1	NACFKRSEXXX				gleif
 kr-bic	NBPAKRSI	National Bank of Pakistan	1	NBPAKRSIXXX				gleif
 kr-bic	NFFCKRSE	수협은행	1	NFFCKRSEXXX				gleif
@@ -2531,7 +2578,6 @@ kr-bic	OCBCKRSE	OVERSEA-CHINESE BANKING CORPORATION LIMITED	1	OCBCKRSEXXX				gle
 kr-bic	PCBCKRSE	中国建设银行股份有限公司	1	PCBCKRSEXXX				gleif
 kr-bic	PUSBKR2P	(주)부산은행	1	PUSBKR2PXXX				gleif
 kr-bic	SBINKRSE	STATE BANK OF INDIA	1	SBINKRSEXXX				gleif
-kr-bic	SBOSKRSE	State Street Bank and Trust Company	1	SBOSKRSEXXX				gleif
 kr-bic	SCBLKRSE	STANDARD CHARTERED BANK KOREA LIMITED	1	SCBLKRSEXXX				gleif
 kr-bic	SHBKKRSE	(주)신한은행	1	SHBKKRSEXXX				gleif
 kr-bic	SMBCKRSE	Sumitomo Mitsui Banking Corporation	1	SMBCKRSEXXX				gleif
@@ -2601,8 +2647,6 @@ my-bic	BMMBMYKL	Bank Muamalat Malaysia Berhad	1	BMMBMYKLXXX				gleif
 my-bic	BOBEMYK2	BOOST BANK BERHAD	1	BOBEMYK2XXX				gleif
 my-bic	BOFAMY2X	BANK OF AMERICA MALAYSIA BERHAD	1	BOFAMY2XXXX				gleif
 my-bic	BOTKMYKX	MUFG BANK (MALAYSIA) BERHAD	1	BOTKMYKXXXX				gleif
-my-bic	CHASMY2A	JPMorgan Chase Bank, National Association	1	CHASMY2AXXX				gleif
-my-bic	CHASMYKX	J.P. MORGAN CHASE BANK BERHAD	1	CHASMYKXXXX				gleif
 my-bic	CIBBMYKL	CIMB BANK BERHAD	1	CIBBMYKLXXX				gleif
 my-bic	CITIMYKL	CITIBANK BERHAD	1	CITIMYKLXXX				gleif
 my-bic	COIMMYKL	CIMB INVESTMENT BANK BERHAD	1	COIMMYKLXXX				gleif
@@ -2630,7 +2674,6 @@ my-bic	MBBEMYKL	MALAYAN BANKING BERHAD	1	MBBEMYKLXXX				gleif
 my-bic	MBEAMYKL	Maybank Investment Bank Berhad	1	MBEAMYKLXXX				gleif
 my-bic	MBISMYKL	MAYBANK ISLAMIC BERHAD	1	MBISMYKLXXX				gleif
 my-bic	MFBBMYKL	ALLIANCE BANK MALAYSIA BERHAD	1	MFBBMYKLXXX				gleif
-my-bic	MHCBMYKA	Mizuho Bank (Malaysia) Berhad	1	MHCBMYKAXXX				gleif
 my-bic	MIDFMYK1	MBSB INVESTMENT BANK BERHAD	1	MIDFMYK1XXX				gleif
 my-bic	MOFDMY2L	Monfi Digital Bank Ltd.	1	MOFDMY2LXXX				gleif
 my-bic	NBADMYKL	FIRST ABU DHABI BANK P.J.S.C.	1	NBADMYKLXXX				gleif
@@ -2642,6 +2685,9 @@ my-bic	PBBEMYKL	PUBLIC BANK BERHAD	1	PBBEMYKLXXX				gleif
 my-bic	PCBCMYKL	CHINA CONSTRUCTION BANK (MALAYSIA) BERHAD	1	PCBCMYKLXXX				gleif
 my-bic	PHBMMYKL	AFFIN BANK BERHAD	1	PHBMMYKLXXX				gleif
 my-bic	RHBAMYKL	RHB ISLAMIC BANK BERHAD	1	RHBAMYKLXXX				gleif
+my-bic	RHBBMYKL	RHB BANK BERHAD	1	RHBBMYKLXXX				gleif
+my-bic	RJHIMYKL	AL RAJHI BANKING & INVESTMENT CORPORATION (MALAYSIA) BHD.	1	RJHIMYKLXXX				gleif
+my-bic	SCBLMYKX	STANDARD CHARTERED BANK MALAYSIA BERHAD	1	SCBLMYKXXXX				gleif
 na-bic	BBNLNANA	BANK BIC NAMIBIA LIMITED	1	BBNLNANAXXX				gleif
 na-bic	BWLINANX	Bank Windhoek Limited	1	BWLINANXXXX				gleif
 na-bic	SBNMNANX	Standard Bank Namibia Limited	1	SBNMNANXXXX				gleif
@@ -2652,6 +2698,33 @@ ng-nuban	057	Zenith Bank	1					curated
 ng-nuban	058	Guaranty Trust Bank	1					curated
 ng-nuban	070	Fidelity Bank	1					curated
 ng-nuban	214	First City Monument Bank	1					curated
+nz-account	01	ANZ Bank New Zealand	361		0001,0194,0381,0623,0798,1118,1166,1813			paymentsnz
+nz-account	02	Bank of New Zealand	354		0018,0290,0454,0610,0792,0940,1233,1281			paymentsnz
+nz-account	03	Westpac	536		0031,0282,0547,0775,1314,1501,1574,1755			paymentsnz
+nz-account	04	ANZ Bank New Zealand	11		2014,2015,2016,2018,2019,2020,2022,2023			paymentsnz
+nz-account	05	China Construction Bank NZ Ltd	6		8884,8885,8886,8887,8888,8889			paymentsnz
+nz-account	06	ANZ Bank New Zealand	182		0006,0193,0301,0411,0529,0622,0805,0923			paymentsnz
+nz-account	08	Bank of New Zealand	39		6501,6511,6519,6531,6543,6559,6573,6587			paymentsnz
+nz-account	10	Industrial and Commercial Bank of China (New Zealand) Ltd	5		5165,5166,5167,5168,5169			paymentsnz
+nz-account	11	ANZ Bank New Zealand	361		5000,5346,5719,6163,6903,7286,7814,8147			paymentsnz
+nz-account	12	ASB Bank	441		3002,3060,3115,3172,3231,3287,3450,3620			paymentsnz
+nz-account	13	Westpac	24		4901,4904,4907,4910,4913,4916,4919,4928			paymentsnz
+nz-account	14	Westpac	34		4701,4707,4717,4727,4739,4765,4775,4783			paymentsnz
+nz-account	15	TSB Bank	35		3941,3945,3949,3954,3958,3969,3974,3978			paymentsnz
+nz-account	16	Westpac	70		4402,4412,4431,4443,4453,4464,4476,4486			paymentsnz
+nz-account	17	Westpac	39		3331,3362,3367,3372,3377,3382,3387,3392			paymentsnz
+nz-account	18	Westpac	31		3501,3504,3508,3512,3516,3520,3524,3530			paymentsnz
+nz-account	19	Westpac	15		4617,4618,4620,4622,4626,4629,4633,4647			paymentsnz
+nz-account	20	Westpac	29		4121,4124,4128,4131,4135,4139,4143,4147			paymentsnz
+nz-account	21	Westpac	36		4801,4805,4810,4814,4819,4823,4828,4833			paymentsnz
+nz-account	22	Westpac	20		4000,4003,4006,4008,4022,4024,4030,4032			paymentsnz
+nz-account	23	Westpac	37		3700,3704,3720,3734,3750,3760,3772,3788			paymentsnz
+nz-account	24	ASB Bank	14		4310,4311,4315,4319,4321,4330,4336,4338			paymentsnz
+nz-account	25	ANZ Bank New Zealand	56		2500,2521,2528,2536,2543,2550,2557,2564			paymentsnz
+nz-account	27	Westpac	14		3801,3802,3805,3817,3820,3821,3823,3825			paymentsnz
+nz-account	30	HSBC New Zealand	16		2901,2903,2906,2908,2911,2916,2932,2940			paymentsnz
+nz-account	38	Kiwibank	500		9000,9062,9125,9187,9250,9312,9375,9437			paymentsnz
+nz-account	88	Bank of China NZ Ltd	5		8800,8801,8802,8803,8805			paymentsnz
 pa-bic	ASBPPAPA	ASB BANK CORP.	1	ASBPPAPAXXX				gleif
 pa-bic	BAALPAPA	Banco Aliado S.A.	1	BAALPAPAXXX				gleif
 pa-bic	BAGEPAPA	BANCO GENERAL, S.A.	1	BAGEPAPAXXX				gleif
@@ -2668,7 +2741,6 @@ pa-bic	BPDOPAPA	POPULAR BANK LTD. INC.	1	BPDOPAPAXXX				gleif
 pa-bic	BRASPAP1	BANCO DO BRASIL SA	1	BRASPAP1XXX				gleif
 pa-bic	CAFEPAPA	BANCO DAVIVIENDA (PANAMA) S.A.	1	CAFEPAPAXXX				gleif
 pa-bic	CAHRPAPA	Caja de Ahorros	1	CAHRPAPAXXX				gleif
-pa-bic	CHASPAP1	JPMorgan Chase Bank, National Association	1	CHASPAP1XXX				gleif
 pa-bic	CITIPAPA	Citibank, National Association	1	CITIPAPAXXX				gleif
 pa-bic	COLOPAPA	BANCOLOMBIA (PANAMA), S.A.	1	COLOPAPAXXX				gleif
 pa-bic	COLOPAPS	BANCOLOMBIA S.A.	1	COLOPAPSXXX				gleif
@@ -2700,7 +2772,6 @@ ph-bic	BOFAPH2X	Bank Of America, National Association	1	BOFAPH2XXXX				gleif
 ph-bic	BOPBPHMM	BDO Private Bank, Inc.	1	BOPBPHMMXXX				gleif
 ph-bic	BOPIPHMM	BANK OF THE PHIL. ISLANDS	1	BOPIPHMMXXX				gleif
 ph-bic	CCBCPHMM	CHANG HWA COMMERCIAL BANK, LTD.	1	CCBCPHMMXXX				gleif
-ph-bic	CHASPHMM	JPMorgan Chase Bank, National Association	1	CHASPHMMXXX				gleif
 ph-bic	CHBKPHMM	CHINA BANKING CORP.	1	CHBKPHMMXXX				gleif
 ph-bic	CHSVPHM1	CHINA BANK SAVINGS, INC.	1	CHSVPHM1XXX				gleif
 ph-bic	CITIPHMX	Citibank, National Association	1	CITIPHMXXXX				gleif
@@ -2751,6 +2822,7 @@ ph-bic	RUBYPHM2	Rural Bank of Bay, Inc.	1	RUBYPHM2XXX				gleif
 ph-bic	RUMTPHM2	RURAL BANK OF MONTALBAN, INC.	1	RUMTPHM2XXX				gleif
 ph-bic	RUPPPHM2	Rural Bank of Porac (Pamp), Inc.	1	RUPPPHM2XXX				gleif
 ph-bic	RUPZPHM2	RURAL BANK OF LA PAZ, INC.	1	RUPZPHM2XXX				gleif
+ph-bic	RURUPHM2	RBANK. OF ROSARIO (LA UNION) INC.	1	RURUPHM2XXX				gleif
 rw-bic	BKIGRWRW	BANK OF KIGALI PLC	1	BKIGRWRWXXX				gleif
 rw-bic	CBAFRWRW	NCBA BANK RWANDA PLC	1	CBAFRWRWXXX				gleif
 rw-bic	ECOCRWRW	ECOBANK RWANDA PLC	1	ECOCRWRWXXX				gleif
@@ -2773,7 +2845,6 @@ tw-bic	BOTPTWTP	TAIPEI STAR BANK LTD	1	BOTPTWTPXXX				gleif
 tw-bic	BRINTWTP	Bank Rakyat Indonesia (Persero) Tbk, PT	1	BRINTWTPXXX				gleif
 tw-bic	CCBCTWTP	CHANG HWA COMMERCIAL BANK, LTD.	1	CCBCTWTPXXX				gleif
 tw-bic	CDIBTWTP	凱基商業銀行股份有限公司	1	CDIBTWTPXXX				gleif
-tw-bic	CHASTWTX	JPMorgan Chase Bank, National Association	1	CHASTWTXXXX				gleif
 tw-bic	CHIDTWT1	CHINA DEVELOPMENT INDUSTRIAL BANK	1	CHIDTWT1XXX				gleif
 tw-bic	CITITW2P	Citibank, National Association	1	CITITW2PXXX				gleif
 tw-bic	CITITWTX	花旗(台灣)商業銀行股份有限公司	1	CITITWTXXXX				gleif
@@ -2794,7 +2865,6 @@ tw-bic	HTBKTWTP	HUATAI COMMERCIAL BANK CO., LTD.	1	HTBKTWTPXXX				gleif
 tw-bic	IBOTTWTP	O-BANK CO., LTD.	1	IBOTTWTPXXX				gleif
 tw-bic	ICBCTWTP	MEGA INTERNATIONAL COMMERCIAL BANK CO., LTD.	1	ICBCTWTPXXX				gleif
 tw-bic	INGBTWTP	ING BANK N.V.	1	INGBTWTPXXX				gleif
-tw-bic	IRVTTWTX	The Bank of New York Mellon	1	IRVTTWTXXXX				gleif
 tw-bic	KOEXTWTP	주식회사 하나은행	1	KOEXTWTPXXX				gleif
 tw-bic	LBOTTWTP	LAND BANK OF TAIWAN CO., LTD.	1	LBOTTWTPXXX				gleif
 tw-bic	MBBTTWTP	TAIWAN BUSINESS BANK, Ltd.	1	MBBTTWTPXXX				gleif
@@ -2804,7 +2874,6 @@ tw-bic	MKTBTWTP	TAIWAN SHIN KONG COMMERCIAL BANK CO., LTD.	1	MKTBTWTPXXX				glei
 tw-bic	NEXCTWTP	NEXT COMMERCIAL BANK Co., LTD.	1	NEXCTWTPXXX				gleif
 tw-bic	OCBCTWTP	OVERSEA-CHINESE BANKING CORPORATION LIMITED	1	OCBCTWTPXXX				gleif
 tw-bic	PCBCTWTP	中国建设银行股份有限公司	1	PCBCTWTPXXX				gleif
-tw-bic	SBOSTWTP	State Street Bank and Trust Company	1	SBOSTWTPXXX				gleif
 tw-bic	SBZATWT1	THE STANDARD BANK OF SOUTH AFRICA LTD	1	SBZATWT1XXX				gleif
 tw-bic	SCBLTWTP	STANDARD CHARTERED INTERNATIONAL COMMERCIAL BANK CO., LTD.	1	SCBLTWTPXXX				gleif
 tw-bic	SCBLTWTX	STANDARD CHARTERED BANK	1	SCBLTWTXXXX				gleif
@@ -2817,6 +2886,9 @@ tw-bic	TCBBTWTH	TAICHUNG COMMERCIAL BANK CO., LTD.	1	TCBBTWTHXXX				gleif
 tw-bic	TDOMTWT1	THE TORONTO-DOMINION BANK	1	TDOMTWT1XXX				gleif
 tw-bic	TNBBTWTN	KING'S TOWN BANK CO., LTD	1	TNBBTWTNXXX				gleif
 tw-bic	TPBKTWTP	TAIPEI FUBON COMMERCIAL BANK CO., LTD.	1	TPBKTWTPXXX				gleif
+tw-bic	TSIBTWTP	TAISHIN INTERNATIONAL BANK CO., LTD.	1	TSIBTWTPXXX				gleif
+tw-bic	UBOTTWTP	UNION BANK OF TAIWAN	1	UBOTTWTPXXX				gleif
+tw-bic	UOVBTWTP	UNITED OVERSEAS BANK LIMITED	1	UOVBTWTPXXX				gleif
 tz-bic	ACTZTZTZ	ACCESSBANK TANZANIA LTD	1	ACTZTZTZXXX				gleif
 tz-bic	AMNNTZTZ	AMANA BANK LIMITED	1	AMNNTZTZXXX				gleif
 tz-bic	AZANTZTZ	AZANIA BANK PUBLIC LIMITED COMPANY	1	AZANTZTZXXX				gleif
@@ -2879,11 +2951,9 @@ za-bic	CITIZAJX	Citibank, National Association	1	CITIZAJXXXX				gleif
 za-bic	COMMZAJJ	Bank of Communications Co Ltd (Johannesburg Branch)	1	COMMZAJJXXX				gleif
 za-bic	DEUTZAJX	DEUTSCHE BANK AKTIENGESELLSCHAFT	1	DEUTZAJXXXX				gleif
 za-bic	FIRNZAJJ	FirstRand Bank Limited	1	FIRNZAJJXXX				gleif
-za-bic	GOSNZAJS	GOLDMAN SACHS INTERNATIONAL BANK	1	GOSNZAJSXXX				gleif
 za-bic	HBZHZAJJ	HBZ Bank Limited	1	HBZHZAJJXXX				gleif
 za-bic	IVESZAJJ	Investec Bank	1	IVESZAJJXXX				gleif
 za-bic	MAMRZAJ1	Grindrod Bank Limited	1	MAMRZAJ1XXX				gleif
-za-bic	MGTCZAJJ	JPMorgan Chase Bank, National Association	1	MGTCZAJJXXX				gleif
 za-bic	NEDSZAJJ	Nedbank Limited	1	NEDSZAJJXXX				gleif
 za-bic	OMBTZAJ2	OM Bank Ltd	1	OMBTZAJ2XXX				gleif
 za-bic	SBINZAJJ	STATE BANK OF INDIA	1	SBINZAJJXXX				gleif

@@ -11,7 +11,9 @@
 
 **[API Reference](https://dasmig.github.io/finance-generator/)** · **[Usage Guide](doc/usage.md)** · **[Data and Method](doc/data.md)** · **[Releases](https://github.com/dasmig/finance-generator/releases)**
 
-Procedural finance generation.
+A person's bank accounts in their country's own form, every part consistent with the person, the country and the date: IBANs and the national forms, with their check digits, the country's banks and its currency.
+
+> Accounts drawn without `safe` are structurally valid and may match a real person's account. The library cannot tell. They are test data: never use them for payments, direct debits, to open accounts or to pass a check. The library looks nothing up. What `safe` promises varies by scheme, and for 88 countries it promises nothing ([data and method](doc/data.md#safe)).
 
 ## Features
 
@@ -48,8 +50,8 @@ to the files you want to use it in, and supply the [`resources`](https://github.
 auto& gen = dasmig::fng::instance(); // loads the lite tier
 
 auto v = gen.get_finance(dasmig::finance_request{});
-std::cout << v << '\n';           // the label
-std::cout << v.to_json() << '\n'; // {"key":...,"label":...,"signature":{...}}
+std::cout << v << '\n';           // DE, EUR, DE69 6137 0086 0438 5498 26 (Deutsche Bank)
+std::cout << v.to_json() << '\n'; // {"country_code":"DE","birth_date":...,"accounts":[...],"signature":{...}}
 
 // The same seed gives the same result everywhere.
 auto again = gen.get_finance(dasmig::finance_request{}, v.seed());
@@ -82,7 +84,7 @@ Tested with:
 
 | Dependency | Version | Bundled | Purpose |
 |-----------|---------|---------|---------|
-| [dasmig-core](https://github.com/dasmig/dasmig-core) | 1.3 | Yes (`core.hpp`, `core/`) | Platform-independent random engine and distributions, data layers, JSON |
+| [dasmig-core](https://github.com/dasmig/dasmig-core) | 1.4 | Yes (`core.hpp`, `core/`) | Platform-independent random engine and distributions, data layers, JSON |
 | [Catch2](https://github.com/catchorg/Catch2) | 3.x | Yes (amalgamated) | Unit testing |
 
 ## License

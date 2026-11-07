@@ -22,6 +22,7 @@ SCHWIFTY_TAG = "2026.11.0"
 SCHWIFTY = f"https://raw.githubusercontent.com/mdomke/schwifty/{SCHWIFTY_TAG}/schwifty"
 SCHWIFTY_TREE = f"https://api.github.com/repos/mdomke/schwifty/git/trees/{SCHWIFTY_TAG}?recursive=1"
 FILES = {
+    "nz_branch_register.xlsx": "https://www.paymentsnz.co.nz/resources/industry-registers/bank-branch-register/download/xlsx/",
     "ifsc_banknames.json": "https://raw.githubusercontent.com/razorpay/ifsc/master/src/banknames.json",
     "ifsc_branches.json": "https://raw.githubusercontent.com/razorpay/ifsc/master/src/IFSC.json",
     "zengin_banks.json": "https://raw.githubusercontent.com/zengin-code/source-data/master/data/banks.json",

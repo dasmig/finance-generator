@@ -31,6 +31,10 @@ https://www.bcb.gov.br/content/estabilidadefinanceira/str1/ParticipantesSTR.csv
 
 Bank of Russia, BIK directory ED807 (Russia's banks): public file. https://www.cbr.ru/s/newbik
 
+Payments NZ, Bank Branch Register (New Zealand's banks and branch counts): the page read states
+no licence. Only codes, names and branch counts are used.
+https://www.paymentsnz.co.nz/resources/industry-registers/bank-branch-register/
+
 FDIC BankFind (US deposits, used as weights): a US federal agency's data; its documentation
 states no terms. The US routing numbers are curated from public pages, not from the Federal
 Reserve's E-Payments Routing Directory, whose terms do not allow redistribution.

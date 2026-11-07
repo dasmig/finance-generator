@@ -4,7 +4,7 @@ in-ifsc	national	@{4}	*{6}	#{9,18}	{bank}0{branch} {account}
 cn-cnaps	national	#{3}	#{9}	#{19}	{bank}{branch} {account}
 us-aba	us_aba	#{9}		#{9,12}	{bank} {account}
 id-bank	national	#{3}		#{10,15}	{bank} {account}
-ng-nuban	ng_nuban	#{3}		#{9}	{account}{check}
+ng-nuban	ng_nuban	#{3}		#{9}	{bank} {account}{check}
 bd-routing	national	#{3}	#{6}	#{13,17}	{bank}{branch} {account}
 mx-clabe	mx_clabe	#{3}	#{3}	#{11}	{bank} {branch} {account} {check}
 jp-zengin	national	#{4}	#{3}	#{7}	{bank}-{branch}-{account}

@@ -10,6 +10,8 @@ This guide covers every feature of the finance-generator library. For a quick ov
 <li><a href="#installation">Installation</a></li>
 <li><a href="#loading-resources">Loading Resources</a></li>
 <li><a href="#generating">Generating</a></li>
+<li><a href="#safe-accounts">Safe Accounts</a></li>
+<li><a href="#checking-a-number">Checking a Number</a></li>
 <li><a href="#seeding-and-deterministic-generation">Seeding and Deterministic Generation</a></li>
 <li><a href="#extending-data">Extending Data</a></li>
 <li><a href="#replay-and-json">Replay and JSON</a></li>
@@ -44,7 +46,8 @@ dasmig::fng gen;                       // an empty, independent instance
 bool ok = gen.load(dasmig::dataset::lite); // false when the tier is not found
 gen.load(std::filesystem::path{"path/to/resources/lite"}); // a directory
 gen.has_data();
-gen.count();
+gen.countries();            // every country and territory
+gen.schemes("DE");          // {"iban-de"}
 ```
 
 Each `load` replaces the data and every layer loaded before.
@@ -54,11 +57,65 @@ Each `load` replaces the data and every layer loaded before.
 ```cpp
 auto v = gen.get_finance(dasmig::finance_request{});      // draws a seed from the instance engine
 auto w = gen.get_finance(dasmig::finance_request{}, 1234);  // deterministic; does not touch the engine
-v.key;   // the catalogue key
-v.label; // the display label
+v.country_code;             // "DE"
+v.birth_date;               // given or drawn
+v.accounts.front().iban;    // "DE69613700860438549826"
 ```
 
-Entries are drawn by their `weight` column. An entry with weight 0 is loaded but never drawn.
+A request says what to generate, and nothing is stored on the generator:
+
+```cpp
+using namespace std::chrono;
+dasmig::finance_request q;
+q.country = "BR";                         // any case; unset: drawn by population
+q.birth_date = year{1980} / May / day{17}; // unset: drawn for ages 18 to 80
+q.reference_date = year{2015} / June / day{1}; // the date the person is seen at
+q.accounts = {dasmig::account_kind::current, dasmig::account_kind::savings}; // one account each
+q.weighted = false;                       // flat over countries and banks
+q.safe = true;                            // see below
+```
+
+A given field leaves every other stream's draws unchanged, and asking for another account leaves the first ones unchanged. A person below the scheme's minimum age has no account, which is not an error. A territory such as `YT` is drawn only when named.
+
+Each account has:
+
+| Field | Meaning |
+| --- | --- |
+| `scheme` | `"iban-de"`, `"us-aba"`, `"mx-clabe"`, `"generic-ke"` |
+| `kind` | As asked for. A label, except in Brazil, whose IBAN carries it |
+| `iban` | Electronic form; empty where the country has no IBAN form |
+| `formatted` | Display form: `DE69 6137 0086 0438 5498 26`, `021000021 123456789` |
+| `bank_code`, `branch_code` | The everyday code where a country has two; the branch is empty when there is none |
+| `account_number` | What follows the bank and branch, with its own check digit |
+| `bank_name`, `bic` | Empty when no listed bank has the code |
+| `currency`, `currency_digits` | ISO 4217 and its minor unit |
+| `opened` | From the minimum age to the reference date |
+| `evidence` | `issuer`, `reference`, `secondary` or `generic`: how much is known of the form |
+| `reserved` | The safe method was applied |
+
+## Safe Accounts
+
+Accounts drawn without `safe` are structurally valid and may match a real person's account. The library cannot tell. They are test data: never use them for payments, direct debits, to open accounts or to pass a check. The library looks nothing up.
+
+`safe = true` applies each scheme's method, and **what it promises varies**:
+
+| Method | What is made | `is_valid` | People, on `full` |
+| --- | --- | --- | --- |
+| `test_value` | A number a sandbox publishes | true | 9.1% |
+| `unassigned_code` | The checks hold, and no bank has the code | false | 2.3% |
+| `wrong_national` | The outer check holds, and the national check fails | false | 5.3% |
+| `wrong_outer` | The check digits fail | false | 20.5% |
+| `none` | A normal draw: **no promise** | true | 62.8% |
+
+`none` covers 88 countries, including China, India, Indonesia and Japan, whose forms have no check digit and whose lists are incomplete. Check [`doc/data.md`](data.md#safe) for your country before relying on `safe`.
+
+## Checking a Number
+
+```cpp
+gen.is_valid("iban-de", "DE89 3704 0044 0532 0130 00"); // the display or electronic form
+```
+
+`is_valid` checks the structure, every check digit, and a known bank when the scheme's list is complete. It looks nothing up, and true does not mean an account exists. An unknown scheme throws.
 
 ## Seeding and Deterministic Generation
 
@@ -68,25 +125,28 @@ Entries are drawn by their `weight` column. An entry with weight 0 is loaded but
 
 ## Extending Data
 
-The shipped data is a base layer. Files with the same columns as `finance.tsv` can be loaded on top of it to add entries, change them or remove them, without editing the shipped file. Rows are keyed by `key`.
+The shipped data is a base layer. Files with the same columns as a table can be loaded on top of it to add rows, change them or remove them, without editing the shipped file. [`doc/data.md`](data.md#columns) gives each table's key.
 
 ```cpp
 // Override mode (the default): a row replaces the loaded row with its key;
-// new keys are added.
-gen.extend("mods/extra.tsv");
+// new keys are added. A file must be named after its table; a directory may hold several.
+gen.extend("mods/banks.tsv");
+gen.extend("mods/");
 
 // From text, for example supplied by a WebAssembly host.
-gen.extend_from_string("key\tlabel\tweight\nzulu\tZulu\t2\n", "scenario");
+gen.extend_from_string(dasmig::finance_table::banks,
+                       "scheme\tbank_code\tname\tweight\niban-ad\t9999\tMy Bank\t10\n", "scenario");
 
-// Remove entries: a layer needs only the key and a disabled column.
-gen.extend_from_string("key\tdisabled\nalpha\t1\n", "cleanup");
+// Remove rows: a row with disabled set to 1.
+gen.extend_from_string(dasmig::finance_table::banks,
+                       "scheme\tbank_code\tname\tweight\tdisabled\niban-ad\t9999\tx\t1\t1\n", "cleanup");
 
 // Add mode refuses to touch keys that are already loaded.
-gen.extend("mods/new.tsv", dasmig::core::layer_mode::add);
+gen.extend("mods/banks.tsv", dasmig::core::layer_mode::add);
 ```
 
-- Every value in a layer is checked before anything changes. A bad layer throws `dasmig::core::tsv_error` with the file, line and column, and the data stays as it was.
-- `layers()` lists what is loaded: source, mode, rows added, replaced and removed, and warnings such as unknown columns.
+- Every value in a layer is checked before anything changes. A bad layer throws `dasmig::core::tsv_error` with the file, line and column, or `std::invalid_argument` when the tables no longer fit together, and the data stays as it was.
+- `layers(table)` lists what is loaded: source, mode, rows added, replaced and removed, and warnings such as unknown columns.
 - `load(...)` replaces the base and drops every layer.
 
 ## Replay and JSON
@@ -142,5 +202,6 @@ gen.for_each_finance(request, {.count = 1'000'000, .threads = 0}, 42, lines);
 | Exception | When |
 |-----------|------|
 | `std::runtime_error` | Any generation call before data is loaded |
-| `std::invalid_argument` | Every loaded entry has weight 0 |
-| `dasmig::core::tsv_error` | A malformed `finance.tsv` or layer (message gives file, line and column); the data is unchanged |
+| `std::runtime_error` | A unique batch runs out of attempts; a scheme's number cannot be drawn in 64 tries |
+| `std::invalid_argument` | An unknown country or scheme; a birth date after the reference date or before 1900; an invalid date; a reference date outside 1900 to 2090; a layer that leaves the tables not fitting together (the data is unchanged) |
+| `dasmig::core::tsv_error` | A malformed table or layer (message gives file, line and column); the data is unchanged |

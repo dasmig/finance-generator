@@ -17,6 +17,8 @@ BUILDERS = {"iban", "iban_br", "iban_ru", "national", "bic_account", "generic", 
 SAFE_METHODS = {"test_value", "unassigned_code", "wrong_national", "wrong_outer", "none"}
 CHECK_BUILDERS = {"", "rib_key", "mod97_bban", "mod97_variant", "it_cin", "cz", "ru_key", "de_method", "es", "pl",
                   "be", "fi", "no", "ee", "is"}
+GERMAN_METHODS = {"09", "63", "00", "88", "06", "13", "10", "76", "32", "28",
+                  "34", "99", "20", "01", "61", "38", "91", "24", "33", "60"}
 ABA_PREFIXES = set(range(0, 13)) | set(range(21, 33)) | set(range(61, 73)) | {80}
 TOP_SCHEMES = 20
 problems = []
@@ -50,10 +52,10 @@ def aba_ok(code):
 def expand(pattern):
     """A pattern with fixed counts as class letters, or None when a count varies."""
     out = ""
-    for symbol, low, high in re.findall(r"([#@*])(?:\{(\d+)(?:,(\d+))?\})?", pattern):
+    for symbol, low, high in re.findall(r"([#@*A-Z0-9])(?:\{(\d+)(?:,(\d+))?\})?", pattern):
         if high:
             return None
-        out += {"#": "n", "@": "a", "*": "c"}[symbol] * int(low or 1)
+        out += {"#": "n", "@": "a", "*": "c"}.get(symbol, "a" if symbol.isalpha() else "n") * int(low or 1)
     return out
 
 
@@ -89,6 +91,8 @@ def check_tier(tier):
             fail(f"{tier} schemes: {key}: {e}")
         if row["builder"].startswith("iban") and row["country"] not in formats:
             fail(f"{tier} schemes: {key} has no IBAN format")
+        if row["safe_method"] == "unassigned_code" and not row["list_complete"]:
+            fail(f"{tier} schemes: {key} draws an unassigned code from a list that is not complete")
 
     for cc, row in formats.items():
         low, high = pattern_lengths(row["bban_pattern"])
@@ -115,7 +119,8 @@ def check_tier(tier):
         seen.add(identity)
         if not row["name"]:
             fail(f"{tier} banks: {identity} has no name")
-        if int(row["weight"]) < 1:
+        # Weight 0 marks a code that is assigned but never drawn, which only a complete list needs.
+        if int(row["weight"]) < 0 or (int(row["weight"]) == 0 and not scheme["list_complete"]):
             fail(f"{tier} banks: {identity} weight {row['weight']}")
         if row["bic"] and len(row["bic"]) not in (8, 11):
             fail(f"{tier} banks: {identity} BIC {row['bic']}")
@@ -131,7 +136,7 @@ def check_tier(tier):
                 fail(f"{tier} banks: {identity} does not fit {classes}")
         if row["method"] and scheme["country"] != "DE":
             fail(f"{tier} banks: {identity} has a method outside Germany")
-        if scheme["country"] == "DE" and not row["method"]:
+        if scheme["country"] == "DE" and int(row["weight"]) and row["method"] not in GERMAN_METHODS:
             fail(f"{tier} banks: {identity} has no method")
         if builder == "us_aba" and not aba_ok(code):
             fail(f"{tier} banks: {identity} fails 3-7-1 or its prefix")
@@ -206,10 +211,20 @@ def report(countries, schemes, banks, expiries):
         print(f"  {key} ({people / total:.1%} of people, {len(members)} banks): {top}")
 
 
+def check_lists(lite, full):
+    """A list that says it is complete holds every code the full tier has."""
+    def codes(banks, scheme):
+        return {r["bank_code"] for r in banks if r["scheme"] == scheme}
+    for key, row in lite[1].items():
+        if row["list_complete"] and codes(lite[2], key) != codes(full[2], key):
+            fail(f"lite schemes: {key} says its list is complete, but full has other codes")
+
+
 def main():
     results = {}
     for tier in TIERS:
         results[tier] = check_tier(tier)
+    check_lists(results["lite"], results["full"])
     for tier in TIERS:
         print(f"{tier}: {len(results[tier][2])} banks, {len(results[tier][1])} schemes")
     report(*results["full"])

@@ -33,6 +33,22 @@ CHECK_BUILDERS = {
 }
 
 
+# A territory uses its parent's banks and national check, since its IBAN carries the same bank codes.
+BANKS_FROM = {**dict.fromkeys("RE GP MQ YT GF PF NC MF WF BL PM TF".split(), "iban-fr"),
+              **dict.fromkeys("JE IM GG".split(), "iban-gb"), "AX": "iban-fi", "GL": "iban-dk", "FO": "iban-dk"}
+# The check digit inside a field the registry does not separate: the Russian key is the 9th digit of the
+# 20-digit account after the 9-digit BIK; the Icelandic one is the 9th digit of the holder's kennitala.
+CHECK_POSITIONS = {"RU": [17, 18], "IS": [20, 21]}
+# UEMOA bank codes open with the country's code (design 4.3). It is literal, not two drawn characters.
+COUNTRY_PREFIX = set("BF BJ CI ML NE SN TG".split())
+
+
+def national_check(row, by_scheme):
+    """The builder of a survey row's national check, a territory taking its parent's."""
+    parent = BANKS_FROM.get(row["country"])
+    return CHECK_BUILDERS[by_scheme[parent]["check"] if parent else row["check"]]
+
+
 def load_formats():
     folder = RAW / "schwifty/iban_registry"
     generated = json.loads((folder / "generated.json").read_text(encoding="utf-8"))
@@ -48,6 +64,7 @@ def load_formats():
 
 def main():
     formats, generated = load_formats()
+    by_scheme = {r["scheme"]: r for r in survey()}
     wanted = [r for r in survey() if r["klass"] in ("iban", "iban_unregistered", "territory")]
     rows, problems = [], []
     for row in sorted(wanted, key=lambda r: r["country"]):
@@ -59,7 +76,13 @@ def main():
         spec = entry["bban_spec"]
         if len(spec_classes(spec)) != entry["bban_length"] or entry["iban_length"] != entry["bban_length"] + 4:
             problems.append(f"{cc}: {spec} does not give {entry['bban_length']} and {entry['iban_length']}")
-        positions = entry.get("positions", {})
+        positions = dict(entry.get("positions", {}))
+        parent = BANKS_FROM.get(cc)
+        if parent and formats[parent[-2:].upper()]["bban_spec"] == spec:
+            # An overwrite may name only some of a territory's positions, so the parent's whole set wins.
+            positions = {**positions, **formats[parent[-2:].upper()].get("positions", {})}
+        if cc in CHECK_POSITIONS:
+            positions["national_checksum_digits"] = CHECK_POSITIONS[cc]
 
         def span(name):
             # schwifty writes an absent field as an empty span such as [0, 0].
@@ -68,10 +91,13 @@ def main():
 
         bank, branch, account, check = (span(n) for n in ("bank_code", "branch_code", "account_code",
                                                           "national_checksum_digits"))
-        rows.append({"country_code": cc, "bban_pattern": spec_pattern(spec), "length": entry["iban_length"],
+        pattern = spec_pattern(spec)
+        if cc in COUNTRY_PREFIX:
+            pattern = cc + pattern.split("{2}", 1)[1]
+        rows.append({"country_code": cc, "bban_pattern": pattern, "length": entry["iban_length"],
                      "bank_from": bank[0], "bank_to": bank[1], "branch_from": branch[0], "branch_to": branch[1],
                      "account_from": account[0], "account_to": account[1], "check_from": check[0], "check_to": check[1],
-                     "check_builder": CHECK_BUILDERS[row["check"]], "sepa": "1" if entry.get("in_sepa_zone") else "",
+                     "check_builder": national_check(row, by_scheme), "sepa": "1" if entry.get("in_sepa_zone") else "",
                      "registered": "" if entry.get("aspirational") or cc not in generated else "1"})
     if problems:
         raise SystemExit("\n".join(problems))

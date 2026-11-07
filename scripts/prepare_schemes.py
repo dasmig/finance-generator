@@ -7,7 +7,7 @@ parts from curated/schemes_national.tsv, which must match the survey key for key
 import re
 
 from fingen_data import CURATED, RAW, pattern_lengths, read_tsv, survey, write_all_tiers
-from prepare_iban import CHECK_BUILDERS
+from prepare_iban import BANKS_FROM, national_check
 
 COLUMNS = ["key", "country", "builder", "display", "safe_method", "evidence", "bank_pattern", "branch_pattern",
            "pattern", "check", "list_complete", "banks_from", "params", "source"]
@@ -16,9 +16,12 @@ COLUMNS = ["key", "country", "builder", "display", "safe_method", "evidence", "b
 IBAN_BUILDERS = {"BR": "iban_br", "RU": "iban_ru"}
 # A check with its own builder outside the IBAN; the structure-only schemes have none.
 NATIONAL_CHECKS = {"us_aba", "ng_nuban", "mx_clabe", "ar_cbu", "nz_account"}
-# A territory uses its parent's banks, since its IBAN carries the same bank codes.
-BANKS_FROM = {**dict.fromkeys("RE GP MQ YT GF PF NC MF WF BL PM TF".split(), "iban-fr"),
-              **dict.fromkeys("JE IM GG".split(), "iban-gb"), "AX": "iban-fi", "GL": "iban-dk", "FO": "iban-dk"}
+COMMENT = "the account survey, designs/finance-generator-accounts.tsv; each row names its source"
+# The everyday form of a country with both (design 4.1). Brazil: Stripe's table. Russia: the BIK and a
+# 20-digit account, 40817 (a person's account) and 810 (roubles) from secondary sources; the 9th digit is the key.
+EVERYDAY = {"BR": {"display": "{bank} {branch} {account}", "bank_pattern": "#{3}", "branch_pattern": "#{4}",
+                   "pattern": "#{7,10}"},
+            "RU": {"display": "{bank} {account}", "bank_pattern": "#{9}", "pattern": "40817810#{12}"}}
 
 
 def complete_lists():
@@ -43,15 +46,16 @@ def main():
     national = {r["scheme"]: r for r in read_tsv(CURATED / "schemes_national.tsv")}
     tests = {r["scheme"] for r in read_tsv(CURATED / "test_accounts.tsv")}
     complete = complete_lists()
+    by_scheme = {r["scheme"]: r for r in survey()}
     rows, problems, used = [], [], set()
     for row in sorted(survey(), key=lambda r: r["scheme"]):
         key, cc, klass = row["scheme"], row["country"], row["klass"]
         common = {"key": key, "country": cc, "evidence": row["evidence"], "source": row["source"]}
         if klass in ("iban", "iban_unregistered", "territory"):
             builder = IBAN_BUILDERS.get(cc, "iban")
-            check = CHECK_BUILDERS[row["check"]]
+            check = national_check(row, by_scheme)
             listed = cc in complete
-            rows.append({**common, "builder": builder, "display": "{iban}", "check": check,
+            rows.append({**common, "builder": builder, "display": "{iban}", **EVERYDAY.get(cc, {}), "check": check,
                          "list_complete": "1" if listed else "", "banks_from": BANKS_FROM.get(cc, ""),
                          "safe_method": safe_method(builder, check, key in tests, listed)})
         elif klass == "generic":
@@ -75,8 +79,7 @@ def main():
         problems.append(f"{extra}: in curated/schemes_national.tsv but not in the survey")
     if problems:
         raise SystemExit("\n".join(problems))
-    write_all_tiers("schemes.tsv", "the account survey, designs/finance-generator-accounts.tsv; each row names its source",
-                    COLUMNS, rows)
+    write_all_tiers("schemes.tsv", COMMENT, COLUMNS, rows)
     print(f"schemes.tsv: {len(rows)} schemes")
 
 
