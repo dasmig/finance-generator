@@ -10,6 +10,9 @@ This guide covers every feature of the finance-generator library. For a quick ov
 <li><a href="#installation">Installation</a></li>
 <li><a href="#loading-resources">Loading Resources</a></li>
 <li><a href="#generating">Generating</a></li>
+<li><a href="#safe-accounts">Safe Accounts</a></li>
+<li><a href="#cards">Cards</a></li>
+<li><a href="#checking-a-number">Checking a Number</a></li>
 <li><a href="#seeding-and-deterministic-generation">Seeding and Deterministic Generation</a></li>
 <li><a href="#extending-data">Extending Data</a></li>
 <li><a href="#replay-and-json">Replay and JSON</a></li>
@@ -44,7 +47,8 @@ dasmig::fng gen;                       // an empty, independent instance
 bool ok = gen.load(dasmig::dataset::lite); // false when the tier is not found
 gen.load(std::filesystem::path{"path/to/resources/lite"}); // a directory
 gen.has_data();
-gen.count();
+gen.countries();            // every country and territory
+gen.schemes("DE");          // {"iban-de"}
 ```
 
 Each `load` replaces the data and every layer loaded before.
@@ -54,11 +58,114 @@ Each `load` replaces the data and every layer loaded before.
 ```cpp
 auto v = gen.get_finance(dasmig::finance_request{});      // draws a seed from the instance engine
 auto w = gen.get_finance(dasmig::finance_request{}, 1234);  // deterministic; does not touch the engine
-v.key;   // the catalogue key
-v.label; // the display label
+v.country_code;             // "DE"
+v.birth_date;               // given or drawn
+v.accounts.front().iban;    // an IBAN, where the country has that form
 ```
 
-Entries are drawn by their `weight` column. An entry with weight 0 is loaded but never drawn.
+A request says what to generate, and nothing is stored on the generator:
+
+```cpp
+using namespace std::chrono;
+dasmig::finance_request q;
+q.country = "BR";                         // any case; unset: drawn by population
+q.birth_date = year{1980} / May / day{17}; // unset: drawn for ages 18 to 80
+q.reference_date = year{2015} / June / day{1}; // the date the person is seen at
+q.accounts = {dasmig::account_kind::current, dasmig::account_kind::savings}; // one account each
+q.weighted = false;                       // flat over countries, banks and networks
+q.safe = true;                            // see below
+```
+
+A given field leaves every other stream's draws unchanged, and asking for another account leaves the first ones unchanged. A person below the scheme's minimum age has no account, which is not an error. A territory such as `YT` is drawn only when named.
+
+Each account has:
+
+| Field | Meaning |
+| --- | --- |
+| `scheme` | `"iban-de"`, `"us-aba"`, `"mx-clabe"`, `"generic-ke"` |
+| `kind` | As asked for. A label, except in Brazil, whose IBAN carries it |
+| `iban` | Electronic form; empty where the country has no IBAN form |
+| `formatted` | Display form: `DE89 3704 0044 0532 0130 00`, `110000000 000123456789` |
+| `bank_code`, `branch_code` | The everyday code where a country has two; the branch is empty when there is none |
+| `account_number` | What follows the bank and branch, with its own check digit |
+| `bank_name`, `bic` | Empty when no listed bank has the code |
+| `currency`, `currency_digits` | ISO 4217 and its minor unit |
+| `opened` | From the minimum age to the reference date |
+| `evidence` | `issuer`, `reference`, `secondary` or `generic`: how much is known of the form |
+| `reserved` | The safe method was applied |
+
+## Safe Accounts
+
+Accounts drawn without `safe`, and cards from `network_range` (the default), are structurally valid and may match a real person's account or card. The library cannot tell. A million default cards would contain real numbers: about 45 by our estimate ([why](data.md#cards)). They are test data: never use them for payments, direct debits, to open accounts or to pass a check, and never send them to a live payment system. Trying numbers on a live system is card testing, which is fraud, whatever produced them. Test numbers work only in the sandbox that published them. The library looks nothing up, and it produces no card images, stripe data, PINs or EMV data.
+
+`safe = true` applies each scheme's method, and **what it promises varies**:
+
+| Method | What is made | `is_valid` | People, on `full` |
+| --- | --- | --- | --- |
+| `test_value` | A number a sandbox publishes | true | 9.1% |
+| `unassigned_code` | The checks hold, and no bank has the code | false | 2.3% |
+| `wrong_national` | The outer check holds, and the national check fails | false | 5.3% |
+| `wrong_outer` | The check digits fail | false | 20.5% |
+| `none` | A normal draw: **no promise** | true | 62.8% |
+
+`none` covers 88 countries, including China, India, Indonesia and Japan, whose forms have no check digit and whose lists are incomplete. Check [`doc/data.md`](data.md#safe) for your country before relying on `safe`.
+
+## Cards
+
+Cards are asked for by kind. A card has no issuer range: the number encodes the network only, and `issuer` is just the first account's bank name.
+
+```cpp
+dasmig::finance_request q;
+q.country = "DE";
+q.cards = {dasmig::card_kind::debit, std::nullopt}; // one debit, and one whose kind is drawn
+q.given_names = "Maria";                            // for the holder; unset: holder is empty
+q.surname = "Garcia";
+q.card_numbers = dasmig::card_source::test_number;  // unset: network_range, or test_number under safe
+q.network = "visa";                                 // unset: drawn for the country
+q.holding = dasmig::ownership::surveyed;            // Findex decides who holds what
+
+const auto v = gen.get_finance(q, 42);
+if (!v.cards.empty()) v.cards.front().formatted;    // "4000 0027 6000 0016"
+```
+
+| `card_source` | Number | `card_valid` | Who holds it |
+| --- | --- | --- | --- |
+| `network_range` (default) | In the network's range with a right Luhn digit | true | **Possibly a real person**, so it never has a security code |
+| `test_number` (default under `safe`) | Published by Stripe, Adyen or Braintree, with its expiry and code where the sandbox states them | true | Nobody: it works only in the sandbox named by `test_source` |
+| `wrong_check` | In the network's range with a wrong Luhn digit | false | Nobody, as far as sources show. Not offered for UnionPay or Hipercard |
+
+`safe` uses `test_number` unless you ask for `wrong_check`, and an explicit `network_range` with `safe` is an error.
+
+Each card has:
+
+| Field | Meaning |
+| --- | --- |
+| `network` | `"visa"`, `"mastercard"`, `"amex"`, `"unionpay"`, `"rupay"`... |
+| `kind`, `source` | As asked for or drawn |
+| `number`, `formatted` | Digits only, and in the network's groups: American Express is 4-6-5 |
+| `holder` | Upper-case ASCII, at most 26 characters, given names shrinking to initials first. Empty without names, or when a name has no Latin form |
+| `issuer` | The first account's bank name; a label only |
+| `security_code` | Always empty for `network_range`. The published code for a test number that needs one, otherwise 3 digits drawn, or 4 for American Express |
+| `issued`, `expires` | The card running at the reference date; `expires` is a month, and the card runs to its last day |
+| `test_source` | `"stripe"`, `"adyen"` or `"braintree"` for a test number; otherwise empty |
+| `reserved` | True for `test_number` and `wrong_check` |
+
+**Who holds what.** With `holding = asked`, the default, everything asked for is given, since a tester asking for a card wants a card. With `surveyed`, accounts and cards become chances by the Global Findex shares for the person's country and age. An instrument not held is left out, which is not an error.
+
+**Age.** A debit or prepaid card is held from 16, and a credit card from 18. Someone younger has none, and a drawn kind gives way to debit.
+
+**Test numbers are few.** A person's cards take different numbers while another fits, and a `unique` batch keyed on the number runs out quickly and throws. A number whose published expiry is before the reference date is not drawn, and it is an error when none is left. Published dates mean a test card's validity can be far longer than a real card's.
+
+## Checking a Number
+
+```cpp
+gen.is_valid("iban-de", "DE89 3704 0044 0532 0130 00"); // the display or electronic form
+gen.card_valid("4242 4242 4242 4242");                  // length and Luhn, for a network whose range holds it
+gen.card_networks("6500000000000002");                  // {"discover", "rupay", ...}: ranges overlap
+gen.networks("IN");                                     // the country's networks
+```
+
+`is_valid` checks the structure, every check digit, and a known bank when the scheme's list is complete. It looks nothing up, and true does not mean an account exists. An unknown scheme throws.
 
 ## Seeding and Deterministic Generation
 
@@ -68,25 +175,28 @@ Entries are drawn by their `weight` column. An entry with weight 0 is loaded but
 
 ## Extending Data
 
-The shipped data is a base layer. Files with the same columns as `finance.tsv` can be loaded on top of it to add entries, change them or remove them, without editing the shipped file. Rows are keyed by `key`.
+The shipped data is a base layer. Files with the same columns as a table can be loaded on top of it to add rows, change them or remove them, without editing the shipped file. [`doc/data.md`](data.md#columns) gives each table's key.
 
 ```cpp
 // Override mode (the default): a row replaces the loaded row with its key;
-// new keys are added.
-gen.extend("mods/extra.tsv");
+// new keys are added. A file must be named after its table; a directory may hold several.
+gen.extend("mods/banks.tsv");
+gen.extend("mods/");
 
 // From text, for example supplied by a WebAssembly host.
-gen.extend_from_string("key\tlabel\tweight\nzulu\tZulu\t2\n", "scenario");
+gen.extend_from_string(dasmig::finance_table::banks,
+                       "scheme\tbank_code\tname\tweight\niban-ad\t9999\tMy Bank\t10\n", "scenario");
 
-// Remove entries: a layer needs only the key and a disabled column.
-gen.extend_from_string("key\tdisabled\nalpha\t1\n", "cleanup");
+// Remove rows: a row with disabled set to 1.
+gen.extend_from_string(dasmig::finance_table::banks,
+                       "scheme\tbank_code\tname\tweight\tdisabled\niban-ad\t9999\tx\t1\t1\n", "cleanup");
 
 // Add mode refuses to touch keys that are already loaded.
-gen.extend("mods/new.tsv", dasmig::core::layer_mode::add);
+gen.extend("mods/banks.tsv", dasmig::core::layer_mode::add);
 ```
 
-- Every value in a layer is checked before anything changes. A bad layer throws `dasmig::core::tsv_error` with the file, line and column, and the data stays as it was.
-- `layers()` lists what is loaded: source, mode, rows added, replaced and removed, and warnings such as unknown columns.
+- Every value in a layer is checked before anything changes. A bad layer throws `dasmig::core::tsv_error` with the file, line and column, or `std::invalid_argument` when the tables no longer fit together, and the data stays as it was.
+- `layers(table)` lists what is loaded: source, mode, rows added, replaced and removed, and warnings such as unknown columns.
 - `load(...)` replaces the base and drops every layer.
 
 ## Replay and JSON
@@ -142,5 +252,6 @@ gen.for_each_finance(request, {.count = 1'000'000, .threads = 0}, 42, lines);
 | Exception | When |
 |-----------|------|
 | `std::runtime_error` | Any generation call before data is loaded |
-| `std::invalid_argument` | Every loaded entry has weight 0 |
-| `dasmig::core::tsv_error` | A malformed `finance.tsv` or layer (message gives file, line and column); the data is unchanged |
+| `std::runtime_error` | A unique batch runs out of attempts; a scheme's number cannot be drawn in 64 tries |
+| `std::invalid_argument` | An unknown country, scheme or network; `safe` with an explicit `network_range`; `wrong_check` on UnionPay or Hipercard; a test number when no sandbox has one for the network and kind, or none runs to the reference date; a birth date after the reference date or before 1900; an invalid date; a reference date outside 1900 to 2090; a layer that leaves the tables not fitting together (the data is unchanged) |
+| `dasmig::core::tsv_error` | A malformed table or layer (message gives file, line and column); the data is unchanged |

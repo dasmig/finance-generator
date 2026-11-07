@@ -1,331 +1,1944 @@
 #include "catch_amalgamated.hpp"
 #include "../dasmig/fingen.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <filesystem>
+#include <format>
+#include <fstream>
 #include <map>
+#include <optional>
 #include <set>
+#include <utility>
 #include <sstream>
 #include <string>
+#include <vector>
+
+using dasmig::account_kind;
+using dasmig::bank_account;
+using dasmig::card_kind;
+using dasmig::card_source;
+using dasmig::finance;
+using dasmig::finance_request;
+using dasmig::finance_table;
+using dasmig::fng;
+using dasmig::payment_card;
+namespace core = dasmig::core;
+namespace detail = dasmig::fingen_detail;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-static dasmig::fng make_loaded_generator()
+static std::filesystem::path resource_dir(const std::string& tier)
 {
-    dasmig::fng gen;
-    if (!gen.load(dasmig::dataset::lite))
+    for (const auto* base : {"resources", "../resources"})
     {
-        for (const auto* candidate : {"resources/lite", "../resources/lite"})
+        const auto candidate = std::filesystem::path{base} / tier;
+        if (std::filesystem::is_directory(candidate)) return candidate;
+    }
+    FAIL("no resources directory");
+    return {};
+}
+
+static std::chrono::year_month_day date(int y, unsigned m, unsigned d)
+{
+    return std::chrono::year_month_day{std::chrono::year{y}, std::chrono::month{m}, std::chrono::day{d}};
+}
+
+static const fng& shared_generator()
+{
+    static const fng gen = []
+    {
+        fng loaded;
+        loaded.load(resource_dir("lite"));
+        return loaded;
+    }();
+    return gen;
+}
+
+static const fng& shared_full_generator()
+{
+    static const fng gen = []
+    {
+        fng loaded;
+        loaded.load(resource_dir("full"));
+        return loaded;
+    }();
+    return gen;
+}
+
+static finance_request in(const std::string& country)
+{
+    finance_request q;
+    q.country = country;
+    return q;
+}
+
+// What the tests read back from the tables.
+struct table_view
+{
+    std::map<std::string, std::string> primary;   // country to scheme
+    std::map<std::string, std::string> currency;  // country to currency
+    std::map<std::string, double> population;     // the countries a draw can land on
+    std::map<std::string, std::string> safe;      // scheme to method
+    std::map<std::string, std::string> builder;   // scheme to builder
+    std::map<std::string, std::string> book_of;   // scheme to the scheme whose banks it takes
+    std::map<std::string, std::size_t> length;    // country to IBAN length
+    std::map<std::string, std::array<int, 4>> at; // country to bank and branch positions
+    std::map<std::string, std::map<std::string, double>> banks; // scheme to code to weight
+    std::set<std::string> tests;                  // published numbers, stripped
+};
+
+static int position(const core::tsv_row& row, std::string_view column)
+{
+    return row[column].empty() ? -1 : std::stoi(std::string{row[column]});
+}
+
+static const table_view& view(const char* tier)
+{
+    static std::map<std::string, table_view> views;
+    auto [it, fresh] = views.try_emplace(tier);
+    if (!fresh) return it->second;
+    auto& v = it->second;
+    const auto dir = resource_dir(tier);
+    const auto countries = core::tsv_document::load(dir / "countries.tsv");
+    for (const auto& row : countries.rows())
+    {
+        const std::string code{row["country_code"]};
+        v.primary[code] = row["primary_scheme"];
+        v.currency[code] = row["currency"];
+        if (row["territory"].empty()) v.population[code] = row.get<double>("population");
+    }
+    const auto schemes = core::tsv_document::load(dir / "schemes.tsv");
+    for (const auto& row : schemes.rows())
+    {
+        const std::string key{row["key"]};
+        v.safe[key] = row["safe_method"];
+        v.builder[key] = row["builder"];
+        v.book_of[key] = row["banks_from"].empty() ? key : std::string{row["banks_from"]};
+    }
+    const auto formats = core::tsv_document::load(dir / "iban_formats.tsv");
+    for (const auto& row : formats.rows())
+    {
+        const std::string code{row["country_code"]};
+        v.length[code] = row.get<std::size_t>("length");
+        v.at[code] = {position(row, "bank_from"), position(row, "bank_to"), position(row, "branch_from"), position(row, "branch_to")};
+    }
+    const auto banks = core::tsv_document::load(dir / "banks.tsv");
+    for (const auto& row : banks.rows()) v.banks[std::string{row["scheme"]}][std::string{row["bank_code"]}] = row.get<double>("weight");
+    const auto tests = core::tsv_document::load(dir / "test_accounts.tsv");
+    for (const auto& row : tests.rows()) v.tests.insert(detail::strip_separators(row["number"]));
+    return v;
+}
+
+static std::string slice(std::string_view text, int from, int to)
+{
+    return from < 0 ? std::string{} : std::string{text.substr(static_cast<std::size_t>(from), static_cast<std::size_t>(to - from))};
+}
+
+// What must hold of every realistic account.
+static void require_coherent(const fng& gen, const table_view& v, const finance& f, const bank_account& a, std::chrono::year_month_day reference)
+{
+    CAPTURE(a.scheme, a.iban, a.formatted, a.bank_code);
+    REQUIRE(a.scheme == v.primary.at(f.country_code));
+    REQUIRE(a.currency == v.currency.at(f.country_code));
+    REQUIRE_FALSE(a.reserved);
+    REQUIRE(gen.is_valid(a.scheme, a.formatted));
+
+    const auto& builder = v.builder.at(a.scheme);
+    const auto& book_key = v.book_of.at(a.scheme);
+    const bool has_book = v.banks.contains(book_key);
+    if (!a.iban.empty())
+    {
+        REQUIRE(a.iban.starts_with(f.country_code));
+        REQUIRE(a.iban.size() == v.length.at(f.country_code));
+        REQUIRE(core::iban_valid(a.iban));
+        REQUIRE(gen.is_valid(a.scheme, a.iban));
+        if (builder == "iban")
         {
-            if (std::filesystem::is_directory(candidate))
-            {
-                gen.load(std::filesystem::path{candidate});
-                break;
-            }
+            const auto& at = v.at.at(f.country_code);
+            const std::string_view bban = std::string_view{a.iban}.substr(4);
+            REQUIRE(a.bank_code == slice(bban, at[0], at[1]));
+            REQUIRE(a.branch_code == slice(bban, at[2], at[3]));
+            REQUIRE(a.iban.ends_with(a.account_number));
+            if (has_book) REQUIRE(v.banks.at(book_key).contains(a.bank_code));
         }
     }
-    REQUIRE(gen.has_data());
-    return gen;
+    else if (has_book && builder != "bic_account" && builder != "generic")
+    {
+        REQUIRE(v.banks.at(book_key).contains(a.bank_code));
+    }
+    if (has_book && !a.iban.empty() && builder == "iban") REQUIRE(v.banks.at(book_key).at(a.bank_code) > 0.0);
+
+    const auto opened = std::chrono::sys_days{a.opened};
+    REQUIRE(opened <= std::chrono::sys_days{reference});
+    REQUIRE(opened >= std::chrono::sys_days{detail::ymd_of(detail::anniversary(detail::to_day(f.birth_date), 16))});
 }
 
 // ---------------------------------------------------------------------------
 // Loading
 // ---------------------------------------------------------------------------
 
-TEST_CASE("load(dataset::lite) loads the catalogue", "[loading]")
+TEST_CASE("load(dataset::lite) loads every table", "[loading]")
 {
-    const auto gen = make_loaded_generator();
-    REQUIRE(gen.count() > 0);
-    REQUIRE(gen.layers().size() == 1);
+    fng gen;
+    gen.load(resource_dir("lite"));
+    REQUIRE(gen.has_data());
+    REQUIRE(gen.countries().size() == view("lite").primary.size());
+    REQUIRE(gen.data_hash() != 0);
+    for (const auto t : {finance_table::countries, finance_table::schemes, finance_table::iban_formats, finance_table::banks,
+                         finance_table::test_accounts, finance_table::networks, finance_table::card_networks,
+                         finance_table::test_cards, finance_table::ownership})
+    {
+        REQUIRE(gen.layers(t).size() == 1);
+        REQUIRE(gen.layers(t).front().added > 0);
+    }
 }
 
-TEST_CASE("load - non-existent path is a no-op", "[loading]")
+TEST_CASE("the full tier loads the same countries and schemes with more banks", "[loading]")
 {
-    dasmig::fng gen;
-    gen.load(std::filesystem::path{"no/such/directory"});
+    const auto& full = shared_full_generator();
+    const auto& lite = shared_generator();
+    REQUIRE(full.countries() == lite.countries());
+    REQUIRE(full.data_hash() != lite.data_hash());
+    REQUIRE(full.layers(finance_table::banks).front().added > lite.layers(finance_table::banks).front().added);
+}
+
+TEST_CASE("a path without the tables is a no-op", "[loading]")
+{
+    fng gen;
+    gen.load(std::filesystem::path{"does/not/exist"});
     REQUIRE_FALSE(gen.has_data());
     REQUIRE(gen.data_hash() == 0);
+    REQUIRE_THROWS_AS(gen.get_finance(finance_request{}), std::runtime_error);
+    REQUIRE_THROWS_AS(gen.get_finance(finance_request{}, 1), std::runtime_error);
 }
-
-#ifndef DASMIG_FINANCE_EMBED // compiled-in data is never missing
-TEST_CASE("load(dataset) returns false for a missing tier", "[loading]")
-{
-    const auto old_cwd = std::filesystem::current_path();
-    const auto tmp = std::filesystem::temp_directory_path() / "fng_empty_dir";
-    std::filesystem::create_directories(tmp);
-    std::filesystem::current_path(tmp);
-    dasmig::fng gen;
-    const bool loaded = gen.load(dasmig::dataset::full);
-    std::filesystem::current_path(old_cwd);
-    std::filesystem::remove_all(tmp);
-    REQUIRE_FALSE(loaded);
-    REQUIRE_FALSE(gen.has_data());
-}
-#endif
 
 TEST_CASE("the singleton loads data on first use", "[loading]")
 {
-    REQUIRE(dasmig::fng::instance().has_data());
+    REQUIRE(fng::instance().has_data());
+}
+
+TEST_CASE("load(dataset) serves the same data as the files", "[loading]")
+{
+    fng gen;
+    REQUIRE(gen.load(dasmig::dataset::lite));
+    REQUIRE(gen.data_hash() == shared_generator().data_hash());
+    REQUIRE(gen.get_finance(finance_request{}, 5).to_json() == shared_generator().get_finance(finance_request{}, 5).to_json());
+}
+
+TEST_CASE("a moved generator keeps its data", "[loading]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto before = gen.get_finance(in("DE"), 3).to_json();
+    fng moved{std::move(gen)};
+    REQUIRE(moved.get_finance(in("DE"), 3).to_json() == before);
 }
 
 // ---------------------------------------------------------------------------
-// Generation
+// Replay
 // ---------------------------------------------------------------------------
 
-TEST_CASE("get_finance throws when no data is loaded", "[generation]")
+TEST_CASE("the same seed gives the same finance, across instances", "[seed]")
 {
-    dasmig::fng gen;
-    REQUIRE_THROWS_AS(gen.get_finance(dasmig::finance_request{}), std::runtime_error);
-    REQUIRE_THROWS_AS(gen.get_finance(dasmig::finance_request{}, std::uint64_t{1}), std::runtime_error);
-}
-
-TEST_CASE("get_finance with a seed is deterministic", "[generation][seed]")
-{
-    const auto gen = make_loaded_generator();
-    for (std::uint64_t s = 0; s < 100; ++s)
+    const auto& gen = shared_generator();
+    fng other;
+    other.load(resource_dir("lite"));
+    for (std::uint64_t seed = 0; seed < 200; ++seed)
     {
-        REQUIRE(gen.get_finance(dasmig::finance_request{}, s).to_json() == gen.get_finance(dasmig::finance_request{}, s).to_json());
+        REQUIRE(gen.get_finance(finance_request{}, seed).to_json() == other.get_finance(finance_request{}, seed).to_json());
     }
 }
 
-TEST_CASE("a result replays from its seed", "[generation][seed]")
+TEST_CASE("a drawn finance replays from its seed", "[seed]")
 {
-    auto gen = make_loaded_generator();
-    const auto v = gen.get_finance(dasmig::finance_request{});
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, v.seed()).to_json() == v.to_json());
-}
-
-TEST_CASE("explicit per-call seeds replay across generator instances", "[seed]")
-{
-    const auto first = make_loaded_generator();
-    const auto second = make_loaded_generator();
-    REQUIRE(first.get_finance(dasmig::finance_request{}, 42).to_json() == second.get_finance(dasmig::finance_request{}, 42).to_json());
-}
-
-TEST_CASE("draws follow the weights", "[generation][stats]")
-{
-    // The sample weights are 5 : 3 : 1.5 : 0.5 : 0 (total 10).
-    const auto gen = make_loaded_generator();
-    std::map<std::string, int> counts;
-    constexpr int draws = 20000;
-    for (std::uint64_t s = 0; s < draws; ++s) ++counts[gen.get_finance(dasmig::finance_request{}, s).key];
-    REQUIRE(counts["echo"] == 0); // weight 0 is never drawn
-    REQUIRE(counts["alpha"] == Catch::Approx(draws * 0.5).margin(draws * 0.02));
-    REQUIRE(counts["bravo"] == Catch::Approx(draws * 0.3).margin(draws * 0.02));
-    REQUIRE(counts["charlie"] == Catch::Approx(draws * 0.15).margin(draws * 0.02));
-    REQUIRE(counts["delta"] == Catch::Approx(draws * 0.05).margin(draws * 0.02));
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto drawn = gen.get_finance(finance_request{});
+    REQUIRE(gen.get_finance(finance_request{}, drawn.seed()).to_json() == drawn.to_json());
+    REQUIRE(drawn.signature().data == gen.data_hash());
 }
 
 // ---------------------------------------------------------------------------
-// Conversion
+// Builders: the authorities' own examples
 // ---------------------------------------------------------------------------
 
-TEST_CASE("string conversion and streaming give the label", "[conversion]")
+TEST_CASE("the German methods reproduce the Bundesbank's examples", "[builders][de]")
 {
-    const auto gen = make_loaded_generator();
-    const auto v = gen.get_finance(dasmig::finance_request{}, std::uint64_t{5});
-    const std::string s = v;
-    std::ostringstream os;
-    os << v;
-    REQUIRE(s == v.label);
-    REQUIRE(os.str() == v.label);
-}
-
-// ---------------------------------------------------------------------------
-// Known answers (rule 2): the same seed and data give these exact results on
-// every compiler and platform. A change here is a change of output and needs
-// a major version. These are the answers for the sample catalogue written by
-// tools/new-library.py; record new ones when the data or the output changes.
-// ---------------------------------------------------------------------------
-
-TEST_CASE("known answers for fixed seeds", "[kat]")
-{
-    dasmig::fng gen;
-    gen.load(std::filesystem::path{"resources/lite"});
-    if (!gen.has_data()) gen.load(std::filesystem::path{"../resources/lite"});
-    REQUIRE(gen.has_data());
-    REQUIRE(gen.data_hash() == 0x1f2808f7b5353d9dULL);
-
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, std::uint64_t{1}).to_json() ==
-            R"({"key":"alpha","label":"Alpha","signature":{"seed":"0000000000000001","data":"1f2808f7b5353d9d"}})");
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, std::uint64_t{3}).to_json() ==
-            R"({"key":"bravo","label":"Bravo","signature":{"seed":"0000000000000003","data":"1f2808f7b5353d9d"}})");
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, std::uint64_t{5}).to_json() ==
-            R"({"key":"charlie","label":"Charlie","signature":{"seed":"0000000000000005","data":"1f2808f7b5353d9d"}})");
-
-    std::uint64_t h = 0xcbf29ce484222325ULL;
-    for (std::uint64_t s = 0; s < 10000; ++s)
+    struct method_case
     {
-        for (const char c : gen.get_finance(dasmig::finance_request{}, s).to_json())
+        int method;
+        std::vector<std::string_view> valid;
+        std::vector<std::string_view> invalid;
+    };
+    const auto pad = [](std::string_view text) { return std::string(10 - text.size(), '0') + std::string{text}; };
+    const std::vector<method_case> cases{
+        {0, {"9290701", "539290858", "1501824", "1501832"}, {}},
+        {6, {"94012341", "5073321010"}, {}},
+        {10, {"12345008", "87654008"}, {}},
+        {13, {"0123456600", "0001234566"}, {}},
+        {24, {"138301", "1306118605", "3307118608", "9307118603"}, {}},
+        {28, {"19999000", "9130000201"}, {}},
+        {32, {"9141405", "1709107983", "0122116979", "0121114867", "9030101192", "9245500460"}, {}},
+        {33, {"48658", "84956"}, {}},
+        {34, {"9913000700", "9914001000"}, {}},
+        {38, {"191919", "1100660"}, {}},
+        {61, {"2063099200", "0260760481"}, {}},
+        {63, {"0123456600", "0001234566"}, {"1123456600", "0001234567"}},
+        {76, {"0006543200", "9012345600", "7876543100", "0012345600", "0000123456", "0000005009"}, {"1234567890", "0000123457", "0000005000"}},
+        {88, {"2525259", "1000500", "90013000", "92525253", "99913003"}, {}},
+        {91, {"2974118000", "5281741000", "9952810000", "2974117000", "5281770000", "9952812000", "8840019000", "8840050000",
+              "8840087000", "8840045000", "8840012000", "8840055000", "8840080000"},
+         {"8840017000", "8840023000", "8840041000", "8840014000", "8840026000", "8840011000", "8840025000", "8840062000",
+          "8840010000", "8840057000"}},
+        {99, {"0068007003", "0847321750", "0396000000", "0499999999"}, {"0395999999", "0500000000"}},
+    };
+    for (const auto& c : cases)
+    {
+        CAPTURE(c.method);
+        for (const auto text : c.valid)
         {
-            h ^= static_cast<unsigned char>(c);
-            h *= 0x100000001b3ULL;
+            CAPTURE(text);
+            REQUIRE(detail::de_valid(c.method, pad(text)));
+        }
+        for (const auto text : c.invalid)
+        {
+            CAPTURE(text);
+            REQUIRE_FALSE(detail::de_valid(c.method, pad(text)));
         }
     }
-    REQUIRE(h == 0x0c2676f3f5cd4d8dULL);
+    // Method 09 has no check at all.
+    REQUIRE(detail::de_valid(9, "1234567890"));
+    REQUIRE_FALSE(detail::de_method_known(11));
+    REQUIRE(detail::de_method_number("A1") == -1);
+    REQUIRE(detail::de_method_number("63") == 63);
+}
+
+TEST_CASE("filling a German account makes it valid under its method", "[builders][de]")
+{
+    core::rng r{7};
+    for (const int method : {0, 1, 6, 9, 10, 13, 20, 24, 28, 32, 33, 34, 38, 60, 61, 63, 76, 88, 91, 99})
+    {
+        CAPTURE(method);
+        int filled = 0;
+        for (int i = 0; i < 400; ++i)
+        {
+            std::string account = core::pattern::parse("#{10}").draw(r);
+            if (!detail::de_fill(method, account)) continue;
+            ++filled;
+            CAPTURE(account);
+            REQUIRE(detail::de_valid(method, account));
+        }
+        REQUIRE(filled > 200);
+    }
+}
+
+TEST_CASE("IBANs with a national check pass, and one changed digit fails", "[builders]")
+{
+    const auto& gen = shared_generator();
+    // The registry's and the authorities' examples, none of them in test_accounts.tsv.
+    const std::vector<std::pair<std::string, std::string>> samples{
+        {"iban-fr", "FR7630006000011234567890189"},
+        {"iban-it", "IT60X0542811101000000123456"},
+        {"iban-sm", "SM86U0322509800000000270100"},
+        {"iban-es", "ES9121000418450200051332"},
+        {"iban-pt", "PT50000201231234567890154"},
+        {"iban-be", "BE68539007547034"},
+        {"iban-pl", "PL61109010140000071219812874"},
+        {"iban-cz", "CZ6508000000192000145399"},
+        {"iban-ba", "BA391290079401028494"},
+        {"iban-rs", "RS35260005601001611379"},
+        {"iban-me", "ME25505000012345678951"},
+        {"iban-mk", "MK07250120000058984"},
+        {"iban-tl", "TL380080012345678910157"},
+        {"iban-xk", "XK051212012345678906"},
+        {"iban-mr", "MR1300020001010000123456753"},
+        {"iban-tn", "TN5910006035183598478831"},
+        {"iban-is", "IS140159260076545510730339"},
+        {"iban-ru", "RU0304452522540817810538091310419"},
+        {"iban-ci", "CI93CI0080111301134291200589"},
+        {"iban-ma", "MA64011519000001205000534921"},
+    };
+    for (const auto& [scheme, number] : samples)
+    {
+        CAPTURE(scheme, number);
+        REQUIRE(gen.is_valid(scheme, number));
+        // The group form too.
+        REQUIRE(gen.is_valid(scheme, detail::group_in_fours(number)));
+        // A wrong outer check.
+        std::string wrong = number;
+        wrong[3] = wrong[3] == '9' ? '0' : static_cast<char>(wrong[3] + 1);
+        REQUIRE_FALSE(gen.is_valid(scheme, wrong));
+    }
+}
+
+TEST_CASE("national forms reproduce their authorities' examples", "[builders]")
+{
+    const auto& gen = shared_generator();
+    SECTION("the ABA routing number")
+    {
+        REQUIRE(detail::aba_valid("021000021"));
+        REQUIRE_FALSE(detail::aba_valid("021000022"));
+        REQUIRE_FALSE(detail::aba_valid("131000022")); // no such prefix
+        REQUIRE(gen.is_valid("us-aba", "021000021 123456789"));
+        REQUIRE_FALSE(gen.is_valid("us-aba", "021000022 123456789"));
+    }
+    SECTION("the CLABE")
+    {
+        REQUIRE(gen.is_valid("mx-clabe", "002010077777777771"));
+        REQUIRE(gen.is_valid("mx-clabe", "002 010 07777777777 1"));
+        REQUIRE_FALSE(gen.is_valid("mx-clabe", "002010077777777772"));
+    }
+    SECTION("the NUBAN")
+    {
+        REQUIRE(gen.is_valid("ng-nuban", "011 0000014579"));
+        REQUIRE(gen.is_valid("ng-nuban", "058 0123456785"));
+        REQUIRE_FALSE(gen.is_valid("ng-nuban", "011 0000014570"));
+    }
+    SECTION("the CBU, per group")
+    {
+        REQUIRE(gen.is_valid("ar-cbu", "2850590940090418135201"));
+        REQUIRE_FALSE(gen.is_valid("ar-cbu", "2850590840090418135201"));
+        REQUIRE_FALSE(gen.is_valid("ar-cbu", "2850590940090418135202"));
+    }
+    SECTION("New Zealand: Inland Revenue's three examples")
+    {
+        REQUIRE(detail::nz_valid("0109020068389000"));
+        REQUIRE(detail::nz_valid("0865231954512001"));
+        REQUIRE(detail::nz_valid("2626000320871032"));
+        REQUIRE(gen.is_valid("nz-account", "01-0902-0068389-00"));
+        REQUIRE(gen.is_valid("nz-account", "08-6523-1954512-001"));
+        REQUIRE(gen.is_valid("nz-account", "26-2600-0320871-032"));
+        REQUIRE(gen.is_valid("nz-account", "01-0242-0100194-00"));
+        REQUIRE_FALSE(gen.is_valid("nz-account", "01-0242-0100195-00"));
+        REQUIRE_FALSE(gen.is_valid("nz-account", "99-0242-0100194-00")); // no such bank
+    }
+    SECTION("New Zealand adds the digits of a product twice, so 18 counts as 9")
+    {
+        // G: 6 * 3 = 18 counts 9, and a last digit of 1 makes 10.
+        REQUIRE(detail::nz_valid("2626000600000001"));
+        REQUIRE_FALSE(detail::nz_valid("2626000600000000"));
+        // E: 9 * 5 = 45 counts 9, and a last digit of 2 makes 11.
+        REQUIRE(detail::nz_valid("0900000009000002"));
+    }
+    SECTION("Russia's key, from the BIK's last three digits and the account")
+    {
+        REQUIRE(gen.is_valid("iban-ru", "044525225 40817810538091310419"));
+        REQUIRE_FALSE(gen.is_valid("iban-ru", "044525225 40817810638091310419"));
+        // The same weights on a correspondent account, whose prefix is 0 and the BIK's
+        // fifth and sixth digits: Sberbank's, at BIK 044525225.
+        unsigned sum = 0;
+        const std::string body = "025" + std::string{"30101810400000000225"};
+        for (std::size_t i = 0; i < body.size(); ++i) sum += static_cast<unsigned>(body[i] - '0') * std::array<unsigned, 3>{7, 1, 3}.at(i % 3);
+        REQUIRE(sum % 10 == 0);
+    }
+    SECTION("Brazil's everyday form is structure only")
+    {
+        REQUIRE(gen.is_valid("iban-br", "001 1234 1234567"));
+        REQUIRE_FALSE(gen.is_valid("iban-br", "001 1234 123456"));
+    }
+    SECTION("a display form with a literal must have it")
+    {
+        REQUIRE(gen.is_valid("in-ifsc", "HDFC0000123 123456789"));
+        REQUIRE_FALSE(gen.is_valid("in-ifsc", "HDFC1000123 123456789"));
+    }
+}
+
+TEST_CASE("is_valid refuses other text and unknown schemes", "[builders]")
+{
+    const auto& gen = shared_generator();
+    REQUIRE_THROWS_AS(gen.is_valid("iban-zz", "x"), std::invalid_argument);
+    REQUIRE_FALSE(gen.is_valid("iban-fr", ""));
+    REQUIRE_FALSE(gen.is_valid("iban-fr", "DE89370400440532013000"));
+    REQUIRE_FALSE(gen.is_valid("iban-fr", "FR763000600001123456789018"));
+    REQUIRE_FALSE(gen.is_valid("us-aba", "banana"));
+    REQUIRE_FALSE(gen.is_valid("generic-af", "12345"));
+    REQUIRE(gen.is_valid("generic-af", "1234567890"));
+}
+
+TEST_CASE("a bank outside a complete list fails, and published test numbers pass", "[builders]")
+{
+    const auto& full = shared_full_generator();
+    // Commerzbank's code, in the German list.
+    REQUIRE(full.is_valid("iban-de", "DE89370400440532013000"));
+    // The test number passes whatever its digits say.
+    REQUIRE(shared_generator().is_valid("au-bsb", "000000 000123456"));
+    // No German bank has the code 00000000: the outer check holds, the list does not.
+    const auto digits = core::iban_check_digits("DE", "000000000532013000");
+    const std::string unknown = std::string{"DE"} + digits[0] + digits[1] + "000000000532013000";
+    REQUIRE(core::iban_valid(unknown));
+    REQUIRE_FALSE(full.is_valid("iban-de", unknown));
 }
 
 // ---------------------------------------------------------------------------
-// JSON and signatures
+// Coherence
 // ---------------------------------------------------------------------------
+
+static void coherence(const fng& gen, const char* tier, int people)
+{
+    const auto& v = view(tier);
+    for (const auto reference : {date(2005, 6, 1), date(2015, 6, 1), date(2023, 7, 1)})
+    {
+        for (const auto& country : gen.countries())
+        {
+            finance_request q = in(country);
+            q.reference_date = reference;
+            q.accounts = {account_kind::current, account_kind::savings};
+            for (int i = 0; i < people; ++i)
+            {
+                const auto f = gen.get_finance(q, static_cast<std::uint64_t>(i) * 0x9E3779B97F4A7C15ULL);
+                REQUIRE(f.country_code == country);
+                REQUIRE(f.accounts.size() == 2);
+                for (const auto& a : f.accounts) require_coherent(gen, v, f, a, reference);
+            }
+        }
+    }
+}
+
+TEST_CASE("every account holds together on the lite tier", "[coherence]")
+{
+    coherence(shared_generator(), "lite", 300);
+}
+
+TEST_CASE("every account holds together on the full tier", "[coherence]")
+{
+    coherence(shared_full_generator(), "full", 60);
+}
+
+TEST_CASE("every account holds together, at length", "[.exhaustive]")
+{
+    const auto& gen = shared_full_generator();
+    const auto& v = view("full");
+    for (std::uint64_t seed = 0; seed < 100000; ++seed)
+    {
+        const auto f = gen.get_finance(finance_request{}, seed);
+        for (const auto& a : f.accounts) require_coherent(gen, v, f, a, finance_request::default_reference_date);
+    }
+}
+
+TEST_CASE("the kinds of number decode to their fields", "[coherence]")
+{
+    const auto& gen = shared_generator();
+    SECTION("Brazil's IBAN carries the bank's ISPB, the branch, the account and its type")
+    {
+        finance_request q = in("BR");
+        q.accounts = {account_kind::current, account_kind::savings};
+        for (std::uint64_t seed = 0; seed < 200; ++seed)
+        {
+            const auto f = gen.get_finance(q, seed);
+            for (const auto& a : f.accounts)
+            {
+                CAPTURE(a.iban, a.formatted);
+                const std::string_view bban = std::string_view{a.iban}.substr(4);
+                REQUIRE(a.bank_code.size() == 3);
+                REQUIRE(bban[8] == '0');
+                REQUIRE(bban.substr(9, 4) == a.branch_code);
+                REQUIRE(std::string(10 - a.account_number.size(), '0') + a.account_number == bban.substr(13, 10));
+                REQUIRE(bban.substr(23) == (a.kind == account_kind::savings ? "P1" : "C1"));
+                REQUIRE(a.formatted == a.bank_code + " " + a.branch_code + " " + a.account_number);
+            }
+        }
+    }
+    SECTION("Russia's holds the BIK and the 20-digit account of a person, in roubles")
+    {
+        for (std::uint64_t seed = 0; seed < 200; ++seed)
+        {
+            const auto a = gen.get_finance(in("RU"), seed).accounts.front();
+            REQUIRE(a.account_number.size() == 20);
+            REQUIRE(a.account_number.starts_with("40817810"));
+            REQUIRE(a.iban.substr(4) == a.bank_code + a.account_number);
+            REQUIRE(a.formatted == a.bank_code + " " + a.account_number);
+        }
+    }
+    SECTION("Iceland's holds the holder's kennitala")
+    {
+        finance_request q = in("IS");
+        q.birth_date = date(1975, 3, 9);
+        for (std::uint64_t seed = 0; seed < 100; ++seed)
+        {
+            const auto a = gen.get_finance(q, seed).accounts.front();
+            REQUIRE(a.iban.substr(16, 6) == "090375");
+            REQUIRE(a.iban[25] == '9');
+        }
+        q.birth_date = date(2003, 12, 1);
+        q.reference_date = date(2023, 7, 1);
+        REQUIRE(gen.get_finance(q, 1).accounts.front().iban.substr(16, 6) == "011203");
+        REQUIRE(gen.get_finance(q, 1).accounts.front().iban[25] == '0');
+    }
+    SECTION("IBANs take digits where the registry allows either, and letters still read")
+    {
+        for (std::uint64_t seed = 0; seed < 200; ++seed)
+        {
+            const auto a = gen.get_finance(in("FR"), seed).accounts.front();
+            REQUIRE(detail::all_digits(a.iban.substr(2)));
+            REQUIRE(a.iban.starts_with("FR76"));
+        }
+        REQUIRE(gen.is_valid("iban-fr", "FR1420041010050500013M02606"));
+    }
+    SECTION("Germany draws only banks whose method is implemented")
+    {
+        for (std::uint64_t seed = 0; seed < 300; ++seed)
+        {
+            const auto a = shared_full_generator().get_finance(in("DE"), seed).accounts.front();
+            REQUIRE(a.bank_name.size() > 0);
+        }
+    }
+    SECTION("a formatted IBAN is the electronic one in fours")
+    {
+        const auto a = gen.get_finance(in("DE"), 1).accounts.front();
+        REQUIRE(a.formatted == detail::group_in_fours(a.iban));
+        REQUIRE(detail::strip_separators(a.formatted) == a.iban);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Safe
+// ---------------------------------------------------------------------------
+
+static void safe_as_declared(const fng& gen, const char* tier, int people)
+{
+    const auto& v = view(tier);
+    std::map<std::string, int> seen;
+    for (const auto& country : gen.countries())
+    {
+        finance_request q = in(country);
+        q.safe = true;
+        const auto& scheme = v.primary.at(country);
+        const auto& method = v.safe.at(scheme);
+        for (int i = 0; i < people; ++i)
+        {
+            const auto f = gen.get_finance(q, static_cast<std::uint64_t>(i) * 0x9E3779B97F4A7C15ULL);
+            const auto& a = f.accounts.front();
+            CAPTURE(scheme, method, a.iban, a.formatted, a.bic);
+            ++seen[method];
+            REQUIRE(a.reserved);
+            REQUIRE(a.bank_name.empty());
+            if (!a.bic.empty()) REQUIRE(a.bic[7] == '0');
+            const std::string& text = a.iban.empty() ? a.formatted : a.iban;
+            const std::string plain = detail::strip_separators(text);
+            if (method == "test_value")
+            {
+                REQUIRE(v.tests.contains(plain));
+                REQUIRE(gen.is_valid(scheme, text));
+            }
+            else if (method == "unassigned_code")
+            {
+                REQUIRE(core::iban_valid(a.iban));
+                REQUIRE_FALSE(v.banks.at(v.book_of.at(scheme)).contains(a.bank_code));
+                REQUIRE(a.bic.empty());
+                REQUIRE_FALSE(gen.is_valid(scheme, text));
+            }
+            else if (method == "wrong_national")
+            {
+                REQUIRE(core::iban_valid(a.iban));
+                REQUIRE_FALSE(gen.is_valid(scheme, text));
+            }
+            else if (method == "wrong_outer")
+            {
+                if (!a.iban.empty())
+                {
+                    REQUIRE_FALSE(core::iban_valid(a.iban));
+                    const int digits = std::stoi(a.iban.substr(2, 2));
+                    REQUIRE(digits >= 2);
+                    REQUIRE(digits <= 98);
+                }
+                REQUIRE_FALSE(gen.is_valid(scheme, text));
+                REQUIRE_FALSE(gen.is_valid(scheme, a.formatted));
+            }
+            else
+            {
+                REQUIRE(method == "none");
+                REQUIRE(gen.is_valid(scheme, text));
+            }
+        }
+    }
+    for (const auto* method : {"test_value", "unassigned_code", "wrong_national", "wrong_outer", "none"})
+    {
+        CAPTURE(method);
+        REQUIRE(seen[method] > 0);
+    }
+}
+
+TEST_CASE("safe accounts are as each scheme's method declares, on the lite tier", "[safe]")
+{
+    safe_as_declared(shared_generator(), "lite", 100);
+}
+
+TEST_CASE("safe accounts are as each scheme's method declares, on the full tier", "[safe]")
+{
+    safe_as_declared(shared_full_generator(), "full", 40);
+}
+
+TEST_CASE("a realistic number is not marked reserved, and safe is per call", "[safe]")
+{
+    const auto& gen = shared_generator();
+    finance_request q = in("IT");
+    q.safe = true;
+    const auto safe = gen.get_finance(q, 9).accounts.front();
+    const auto real = gen.get_finance(in("IT"), 9).accounts.front();
+    REQUIRE(safe.reserved);
+    REQUIRE_FALSE(real.reserved);
+    REQUIRE(safe.bank_name.empty());
+    REQUIRE_FALSE(real.bank_name.empty());
+    REQUIRE(safe.iban != real.iban);
+}
+
+TEST_CASE("an unassigned code stays unassigned after a check digit inside it is filled", "[safe]")
+{
+    // Poland's check is the last digit of its bank code.
+    const auto& gen = shared_full_generator();
+    const auto& book = view("full").banks.at("iban-pl");
+    finance_request q = in("PL");
+    q.safe = true;
+    for (std::uint64_t seed = 0; seed < 20000; ++seed)
+    {
+        const auto a = gen.get_finance(q, seed).accounts.front();
+        CAPTURE(a.iban);
+        REQUIRE_FALSE(book.contains(a.bank_code));
+        REQUIRE_FALSE(gen.is_valid("iban-pl", a.iban));
+    }
+}
+
+TEST_CASE("Norway's 00 accounts are read either way and never drawn", "[builders]")
+{
+    const auto& gen = shared_generator();
+    // By the short reading: 5, 4, 3, 2 over 8665 gives 7.
+    REQUIRE(gen.is_valid("iban-no", "NO3978810086657"));
+    // And by the full reading of the same digits, with its own check digit.
+    const auto full = detail::no_digit("7881008665");
+    REQUIRE(full.has_value());
+    const auto digits = core::iban_check_digits("NO", "7881008665" + *full);
+    REQUIRE(gen.is_valid("iban-no", std::string{"NO"} + digits[0] + digits[1] + "7881008665" + *full));
+    for (std::uint64_t seed = 0; seed < 5000; ++seed)
+    {
+        const auto a = gen.get_finance(in("NO"), seed).accounts.front();
+        REQUIRE(a.iban.substr(8, 2) != "00");
+    }
+}
+
+TEST_CASE("Germany's method 09 has no check to spoil, and falls to the outer one", "[safe]")
+{
+    fng gen;
+    gen.load(resource_dir("full"));
+    gen.extend_from_string(finance_table::schemes,
+                           "key\tcountry\tbuilder\tdisplay\tsafe_method\tevidence\tcheck\tlist_complete\n"
+                           "iban-de\tDE\tiban\t{iban}\twrong_national\tissuer\tde_method\t1\n",
+                           "mine");
+    gen.extend_from_string(finance_table::banks, "scheme\tbank_code\tname\tweight\tmethod\niban-de\t10000000\tTest\t1000000000\t09\n", "mine");
+    finance_request q = in("DE");
+    q.safe = true;
+    for (std::uint64_t seed = 0; seed < 100; ++seed)
+    {
+        const auto a = gen.get_finance(q, seed).accounts.front();
+        if (a.bank_code == "10000000") REQUIRE_FALSE(core::iban_valid(a.iban));
+        REQUIRE_FALSE(gen.is_valid("iban-de", a.iban));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Requests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("a given input is honoured and moves nothing else", "[requests]")
+{
+    const auto& gen = shared_generator();
+    for (std::uint64_t seed = 0; seed < 100; ++seed)
+    {
+        const auto base = gen.get_finance(finance_request{}, seed);
+
+        finance_request same_country = in(base.country_code);
+        const auto with_country = gen.get_finance(same_country, seed);
+        REQUIRE(with_country.to_json() == base.to_json());
+
+        finance_request same_birth;
+        same_birth.birth_date = base.birth_date;
+        REQUIRE(gen.get_finance(same_birth, seed).to_json() == base.to_json());
+
+        // Another country leaves the birth date where it was.
+        const auto other = gen.get_finance(in(base.country_code == "DE" ? "FR" : "DE"), seed);
+        REQUIRE(other.birth_date == base.birth_date);
+    }
+}
+
+TEST_CASE("another account leaves the first ones unchanged", "[requests]")
+{
+    const auto& gen = shared_generator();
+    finance_request one = in("DE");
+    finance_request three = one;
+    three.accounts = {account_kind::current, account_kind::savings, account_kind::current};
+    for (std::uint64_t seed = 0; seed < 100; ++seed)
+    {
+        const auto a = gen.get_finance(one, seed);
+        const auto b = gen.get_finance(three, seed);
+        REQUIRE(b.accounts.size() == 3);
+        REQUIRE(a.accounts.front().iban == b.accounts.front().iban);
+        REQUIRE(a.accounts.front().opened == b.accounts.front().opened);
+        REQUIRE(b.accounts[0].iban != b.accounts[1].iban);
+        REQUIRE(b.accounts[1].kind == account_kind::savings);
+    }
+}
+
+TEST_CASE("the country is any case, and a territory only by name", "[requests]")
+{
+    const auto& gen = shared_generator();
+    REQUIRE(gen.get_finance(in("de"), 1).country_code == "DE");
+    REQUIRE(gen.get_finance(in("YT"), 1).accounts.front().iban.starts_with("YT"));
+    REQUIRE(gen.schemes("de") == std::vector<std::string>{"iban-de"});
+    REQUIRE_THROWS_AS(gen.schemes("ZZ"), std::invalid_argument);
+    const auto& v = view("lite");
+    for (std::uint64_t seed = 0; seed < 5000; ++seed)
+    {
+        REQUIRE(v.population.contains(gen.get_finance(finance_request{}, seed).country_code));
+    }
+}
+
+TEST_CASE("bad requests are refused", "[requests]")
+{
+    const auto& gen = shared_generator();
+    REQUIRE_THROWS_AS(gen.get_finance(in("ZZ"), 1), std::invalid_argument);
+    finance_request q;
+    q.birth_date = date(2024, 1, 1);
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    q.birth_date = date(1899, 12, 31);
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    q.birth_date = date(2023, 2, 30);
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    finance_request r;
+    r.reference_date = date(2023, 2, 30);
+    REQUIRE_THROWS_AS(gen.get_finance(r, 1), std::invalid_argument);
+    r.reference_date = date(1899, 12, 31);
+    REQUIRE_THROWS_AS(gen.get_finance(r, 1), std::invalid_argument);
+    r.reference_date = date(2091, 1, 1);
+    REQUIRE_THROWS_AS(gen.get_finance(r, 1), std::invalid_argument);
+}
+
+TEST_CASE("ages and minimum ages", "[requests]")
+{
+    const auto& gen = shared_generator();
+    SECTION("no account asked, none given")
+    {
+        finance_request q = in("DE");
+        q.accounts.clear();
+        const auto f = gen.get_finance(q, 1);
+        REQUIRE(f.accounts.empty());
+        REQUIRE(f.country_code == "DE");
+        REQUIRE(f.to_string() == "DE");
+    }
+    SECTION("a child has no account until the minimum age, then from that day")
+    {
+        finance_request q = in("DE");
+        q.birth_date = date(2010, 3, 15);
+        q.reference_date = date(2026, 3, 14);
+        REQUIRE(gen.get_finance(q, 1).accounts.empty());
+        q.reference_date = date(2026, 3, 15);
+        const auto f = gen.get_finance(q, 1);
+        REQUIRE(f.accounts.size() == 1);
+        REQUIRE(f.accounts.front().opened == date(2026, 3, 15));
+    }
+    SECTION("a layer changes a scheme's minimum age")
+    {
+        fng own;
+        own.load(resource_dir("lite"));
+        own.extend_from_string(finance_table::schemes,
+                               "key\tcountry\tbuilder\tdisplay\tsafe_method\tevidence\tcheck\tmin_age\n"
+                               "iban-de\tDE\tiban\t{iban}\ttest_value\tissuer\tde_method\t21\n",
+                               "mine");
+        finance_request q = in("DE");
+        q.birth_date = date(2000, 1, 1);
+        q.reference_date = date(2020, 12, 31);
+        REQUIRE(own.get_finance(q, 1).accounts.empty());
+        q.reference_date = date(2021, 1, 1);
+        REQUIRE(own.get_finance(q, 1).accounts.size() == 1);
+    }
+    SECTION("drawn ages run from 18 to 80, and the first of the range is reached")
+    {
+        int youngest = 200;
+        int oldest = 0;
+        const auto ref = finance_request::default_reference_date;
+        for (std::uint64_t seed = 0; seed < 20000; ++seed)
+        {
+            const auto born = gen.get_finance(finance_request{}, seed).birth_date;
+            int age = static_cast<int>(ref.year()) - static_cast<int>(born.year());
+            if (std::chrono::month_day{born.month(), born.day()} > std::chrono::month_day{ref.month(), ref.day()}) --age;
+            youngest = std::min(youngest, age);
+            oldest = std::max(oldest, age);
+        }
+        REQUIRE(youngest == 18);
+        REQUIRE(oldest == 80);
+    }
+    SECTION("the reference date moves what is drawn back, as far as 1900")
+    {
+        finance_request q = in("DE");
+        q.reference_date = date(1900, 1, 1);
+        const auto f = gen.get_finance(q, 1);
+        REQUIRE(f.birth_date == date(1900, 1, 1));
+        REQUIRE(f.accounts.empty());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Statistics
+// ---------------------------------------------------------------------------
+
+TEST_CASE("countries follow population, and are flat when asked", "[stats]")
+{
+    const auto& gen = shared_generator();
+    const auto& v = view("lite");
+    double total = 0.0;
+    for (const auto& [code, people] : v.population) total += people;
+    constexpr int draws = 20000;
+    std::map<std::string, int> weighted;
+    std::map<std::string, int> flat;
+    finance_request uniform;
+    uniform.weighted = false;
+    for (std::uint64_t seed = 0; seed < draws; ++seed)
+    {
+        ++weighted[gen.get_finance(finance_request{}, seed).country_code];
+        ++flat[gen.get_finance(uniform, seed).country_code];
+    }
+    for (const auto* code : {"IN", "CN", "US", "BR"})
+    {
+        CAPTURE(code);
+        REQUIRE(weighted[code] == Catch::Approx(draws * v.population.at(code) / total).margin(draws * 0.015));
+    }
+    REQUIRE(flat["IN"] == Catch::Approx(static_cast<double>(draws) / static_cast<double>(v.population.size())).margin(draws * 0.005));
+    REQUIRE(flat["TV"] > 0);
+}
+
+TEST_CASE("banks follow their weights, and are flat when asked", "[stats]")
+{
+    const auto& gen = shared_full_generator();
+    const auto& banks = view("full").banks.at("nz-account");
+    double total = 0.0;
+    for (const auto& [code, weight] : banks) total += weight;
+    constexpr int draws = 20000;
+    std::map<std::string, int> counted;
+    std::map<std::string, int> flat;
+    finance_request uniform = in("NZ");
+    uniform.weighted = false;
+    for (std::uint64_t seed = 0; seed < draws; ++seed)
+    {
+        ++counted[gen.get_finance(in("NZ"), seed).accounts.front().bank_code];
+        ++flat[gen.get_finance(uniform, seed).accounts.front().bank_code];
+    }
+    for (const auto* code : {"03", "01", "38"})
+    {
+        CAPTURE(code);
+        REQUIRE(counted[code] == Catch::Approx(draws * banks.at(code) / total).margin(draws * 0.015));
+        REQUIRE(flat[code] == Catch::Approx(static_cast<double>(draws) / static_cast<double>(banks.size())).margin(draws * 0.015));
+    }
+}
+
+TEST_CASE("a bank of weight 0 is known and never drawn", "[stats]")
+{
+    const auto& gen = shared_full_generator();
+    const auto& banks = view("full").banks.at("iban-gb");
+    std::set<std::string> kept;
+    for (const auto& [code, weight] : banks)
+    {
+        if (weight == 0.0) kept.insert(code);
+    }
+    REQUIRE_FALSE(kept.empty());
+    for (std::uint64_t seed = 0; seed < 5000; ++seed)
+    {
+        REQUIRE_FALSE(kept.contains(gen.get_finance(in("GB"), seed).accounts.front().bank_code));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Batch
+// ---------------------------------------------------------------------------
+
+TEST_CASE("batch items equal single calls, and threads, ranges and streaming agree", "[batch]")
+{
+    const auto& gen = shared_generator();
+    constexpr std::uint64_t batch_seed = 77;
+    const auto items = gen.get_finance_batch(finance_request{}, {.count = 500}, batch_seed);
+    REQUIRE(items.size() == 500);
+    for (std::size_t i = 0; i < items.size(); ++i)
+    {
+        REQUIRE(items[i].to_json() == gen.get_finance(finance_request{}, core::item_seed(batch_seed, i)).to_json());
+    }
+    const auto threaded = gen.get_finance_batch(finance_request{}, {.count = 500, .threads = 4}, batch_seed);
+    const auto range = gen.get_finance_batch(finance_request{}, {.count = 100, .first = 400}, batch_seed);
+    for (std::size_t i = 0; i < 500; ++i) REQUIRE(threaded[i].to_json() == items[i].to_json());
+    for (std::size_t i = 0; i < 100; ++i) REQUIRE(range[i].to_json() == items[400 + i].to_json());
+
+    std::vector<std::string> streamed;
+    gen.for_each_finance(finance_request{}, {.count = 500, .threads = 2}, batch_seed,
+                         [&](std::uint64_t index, finance& item)
+                         {
+                             REQUIRE(index == streamed.size());
+                             streamed.push_back(item.to_json());
+                         });
+    REQUIRE(streamed.size() == 500);
+    for (std::size_t i = 0; i < 500; ++i) REQUIRE(streamed[i] == items[i].to_json());
+}
+
+TEST_CASE("a unique batch has no repeats, and refuses more than the list holds", "[batch]")
+{
+    const auto& gen = shared_generator();
+    const auto by_iban = core::unique_rule::by<finance>([](const finance& v) { return v.accounts.front().iban; });
+    const auto items = gen.get_finance_batch(in("DE"), {.count = 500, .unique = by_iban}, 3);
+    std::set<std::string> seen;
+    for (const auto& v : items) seen.insert(v.accounts.front().iban);
+    REQUIRE(seen.size() == 500);
+
+    const auto by_country = core::unique_rule::by<finance>([](const finance& v) { return v.country_code; });
+    REQUIRE_THROWS_AS(gen.get_finance_batch(in("DE"), {.count = 2, .unique = by_country}, 3), std::runtime_error);
+}
+
+TEST_CASE("a batch with a drawn seed works, and the instance's engine moves", "[batch]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto a = gen.get_finance_batch(finance_request{}, {.count = 3});
+    const auto b = gen.get_finance_batch(finance_request{}, {.count = 3});
+    REQUIRE(a.size() == 3);
+    REQUIRE(a.front().seed() != b.front().seed());
+    int seen = 0;
+    gen.for_each_finance(finance_request{}, {.count = 3}, [&](std::uint64_t, finance&) { ++seen; });
+    REQUIRE(seen == 3);
+}
+
+// ---------------------------------------------------------------------------
+// Conversion and JSON
+// ---------------------------------------------------------------------------
+
+TEST_CASE("string conversion and streaming give the summary", "[conversion]")
+{
+    const auto& gen = shared_generator();
+    const auto f = gen.get_finance(in("DE"), 5);
+    const auto& a = f.accounts.front();
+    const std::string s = f;
+    std::ostringstream os;
+    os << f;
+    REQUIRE(s == "DE, EUR, " + a.formatted + " (" + a.bank_name + ")");
+    REQUIRE(os.str() == s);
+}
 
 TEST_CASE("to_json and signature", "[json]")
 {
-    const auto gen = make_loaded_generator();
-    const auto v = gen.get_finance(dasmig::finance_request{}, std::uint64_t{99});
-    REQUIRE(v.signature().seed == 99);
-    REQUIRE(v.seed() == 99);
-    REQUIRE(v.signature().data == gen.data_hash());
-    const auto json = v.to_json();
-    REQUIRE(json.starts_with(R"({"key":")"));
+    const auto& gen = shared_generator();
+    const auto f = gen.get_finance(in("DE"), 99);
+    REQUIRE(f.signature().seed == 99);
+    REQUIRE(f.seed() == 99);
+    REQUIRE(f.signature().data == gen.data_hash());
+    const auto json = f.to_json();
+    REQUIRE(json.starts_with(R"({"country_code":"DE","birth_date":")"));
+    REQUIRE(json.find(R"("scheme":"iban-de")") != std::string::npos);
+    REQUIRE(json.find(R"("kind":"current")") != std::string::npos);
+    REQUIRE(json.find(R"("currency":"EUR","currency_digits":2)") != std::string::npos);
+    REQUIRE(json.find(R"("reserved":false)") != std::string::npos);
     REQUIRE(json.find(R"("signature":{"seed":"0000000000000063")") != std::string::npos);
-
-    dasmig::core::json_writer w;
+    core::json_writer w;
     w.begin_array();
-    v.to_json(w);
+    f.to_json(w);
     w.end_array();
     REQUIRE(w.str() == "[" + json + "]");
 }
 
 // ---------------------------------------------------------------------------
-// Extending data (rule 8)
+// Cards
 // ---------------------------------------------------------------------------
 
-TEST_CASE("extend overrides, adds and removes entries", "[extend]")
+using row_map = std::map<std::string, std::string>;
+
+// A shipped table as rows of column to cell, without using the header's parser.
+static std::vector<row_map> read_table(const std::string& name)
 {
-    auto gen = make_loaded_generator();
-    const auto base_count = gen.count();
-    const auto base_hash = gen.data_hash();
-    const auto before = gen.get_finance(dasmig::finance_request{}, std::uint64_t{7});
-
-    // Only the new entry has weight: every draw picks it.
-    const auto& info = gen.extend_from_string("key\tlabel\tweight\n"
-                                              "alpha\tAlpha\t0\nbravo\tBravo\t0\n"
-                                              "charlie\tCharlie\t0\ndelta\tDelta\t0\n"
-                                              "zulu\tZulu\t1\n",
-                                              "mod.tsv");
-    REQUIRE(info.replaced == 4);
-    REQUIRE(info.added == 1);
-    REQUIRE(gen.count() == base_count + 1);
-    REQUIRE(gen.data_hash() != base_hash);
-    REQUIRE(gen.layers().size() == 2);
-    const auto after = gen.get_finance(dasmig::finance_request{}, std::uint64_t{7});
-    REQUIRE(after.key == "zulu");
-    REQUIRE(after.signature().data == gen.data_hash());
-
-    gen.extend_from_string("key\tdisabled\nzulu\t1\n", "remove.tsv");
-    REQUIRE(gen.count() == base_count);
-    REQUIRE_THROWS_AS(gen.get_finance(dasmig::finance_request{}, std::uint64_t{7}), std::invalid_argument); // all weights 0
-
-    // Reloading the base drops every layer.
-    REQUIRE(gen.load(dasmig::dataset::lite));
-    REQUIRE(gen.data_hash() == base_hash);
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, std::uint64_t{7}).to_json() == before.to_json());
-}
-
-TEST_CASE("a bad layer is rejected and leaves the data unchanged", "[extend][errors]")
-{
-    auto gen = make_loaded_generator();
-    const auto hash = gen.data_hash();
-    const auto count = gen.count();
-
-    REQUIRE_THROWS_WITH(gen.extend_from_string("key\tlabel\tweight\nzulu\tZulu\theavy\n", "bad.tsv"),
-                        "bad.tsv:2: column 'weight': expected a number, got 'heavy'");
-    REQUIRE_THROWS_AS(gen.extend_from_string("key\tlabel\tweight\nzulu\tZulu\t-1\n", "negative.tsv"),
-                      dasmig::core::tsv_error);
-    REQUIRE_THROWS_AS(gen.extend_from_string("key\tlabel\nzulu\tZulu\n", "partial.tsv"),
-                      dasmig::core::tsv_error); // required column missing
-    REQUIRE_THROWS_AS(gen.extend_from_string("key\tlabel\tweight\nalpha\tAlpha\t1\n", "clash.tsv",
-                                             dasmig::core::layer_mode::add),
-                      dasmig::core::tsv_error); // alpha already loaded
-
-    REQUIRE(gen.data_hash() == hash);
-    REQUIRE(gen.count() == count);
-    REQUIRE(gen.layers().size() == 1);
-}
-
-#ifdef DASMIG_FINANCE_EMBED
-TEST_CASE("compiled-in data needs no files and matches them", "[embed]")
-{
-    const auto old_cwd = std::filesystem::current_path();
-    const auto tmp = std::filesystem::temp_directory_path() / "fng_embed_dir";
-    std::filesystem::create_directories(tmp);
-    std::filesystem::current_path(tmp);
-    dasmig::fng gen;
-    const bool loaded = gen.load(dasmig::dataset::lite);
-    std::filesystem::current_path(old_cwd);
-    std::filesystem::remove_all(tmp);
-
-    REQUIRE(loaded);
-    REQUIRE(gen.layers().front().source == "embedded:lite/finance.tsv");
-    REQUIRE(gen.data_hash() == 0x1f2808f7b5353d9dULL); // same as the file
-    REQUIRE(gen.get_finance(dasmig::finance_request{}, std::uint64_t{1}).to_json() ==
-            R"({"key":"alpha","label":"Alpha","signature":{"seed":"0000000000000001","data":"1f2808f7b5353d9d"}})");
-}
-#endif
-
-// ---------------------------------------------------------------------------
-// Batch generation
-// ---------------------------------------------------------------------------
-
-TEST_CASE("finance batch: items equal the single calls for any thread count", "[batch]")
-{
-    auto gen = make_loaded_generator();
-    const auto request = dasmig::finance_request{};
-    const auto batch = gen.get_finance_batch(request, {.count = 200, .threads = 1}, 77);
-    REQUIRE(batch.size() == 200);
-    for (std::uint64_t i = 0; i < batch.size(); ++i)
+    std::ifstream file{resource_dir("lite") / name};
+    REQUIRE(file.good());
+    const auto split = [](const std::string& line)
     {
-        REQUIRE(batch[i].to_json() == gen.get_finance(request, dasmig::core::item_seed(77, i)).to_json());
-    }
-
-    // A range is computed directly, on any number of threads.
-    const auto tail = gen.get_finance_batch(request, {.count = 100, .first = 100, .threads = 4}, 77);
-    REQUIRE(tail.size() == 100);
-    for (std::size_t i = 0; i < tail.size(); ++i)
-    {
-        REQUIRE(tail[i].to_json() == batch[100 + i].to_json());
-    }
-    for (const std::size_t threads : {2U, 7U, 0U})
-    {
-        const auto other = gen.get_finance_batch(request, {.count = 200, .threads = threads}, 77);
-        REQUIRE(other.size() == batch.size());
-        for (std::size_t i = 0; i < other.size(); ++i)
+        std::vector<std::string> cells(1);
+        for (const char c : line)
         {
-            REQUIRE(other[i].to_json() == batch[i].to_json());
+            if (c == '\t') cells.emplace_back();
+            else if (c != '\r') cells.back().push_back(c);
+        }
+        return cells;
+    };
+    std::vector<std::string> header;
+    std::vector<row_map> rows;
+    std::string line;
+    while (std::getline(file, line))
+    {
+        if (line.starts_with('#')) continue;
+        const auto cells = split(line);
+        if (header.empty())
+        {
+            header = cells;
+            continue;
+        }
+        row_map row;
+        for (std::size_t i = 0; i < header.size() && i < cells.size(); ++i) row[header[i]] = cells[i];
+        rows.push_back(std::move(row));
+    }
+    return rows;
+}
+
+static double share_of(const std::string& country, const std::string& group, const std::string& column)
+{
+    for (const auto& row : read_table("ownership.tsv"))
+    {
+        if (row.at("country_code") == country && row.at("group") == group) return std::stod(row.at(column));
+    }
+    FAIL("no ownership row");
+    return 0.0;
+}
+
+static finance_request carded(const char* country, std::vector<std::optional<card_kind>> kinds = {card_kind::debit},
+                              std::optional<card_source> source = std::nullopt)
+{
+    finance_request q = in(country);
+    q.accounts = {};
+    q.cards = std::move(kinds);
+    q.card_numbers = source;
+    return q;
+}
+
+static std::string iso_month(const std::chrono::year_month& m)
+{
+    return std::format("{:04}-{:02}", static_cast<int>(m.year()), static_cast<unsigned>(m.month()));
+}
+
+static void check_card(const fng& gen, const payment_card& c, const std::chrono::year_month_day& born,
+                       const std::chrono::year_month_day& reference)
+{
+    using namespace std::chrono;
+    REQUIRE(detail::all_digits(c.number));
+    const auto holders = gen.card_networks(c.number);
+    REQUIRE(std::ranges::find(holders, c.network) != holders.end());
+    REQUIRE(detail::strip_separators(c.formatted) == c.number);
+    REQUIRE(c.issued <= reference);
+    REQUIRE(reference <= year_month_day{year_month_day_last{c.expires.year(), month_day_last{c.expires.month()}}});
+    const int min_age = c.kind == card_kind::credit ? 18 : 16;
+    REQUIRE(detail::to_day(c.issued) >= detail::anniversary(detail::to_day(born), min_age));
+
+    const auto digits = c.network == "amex" ? 4U : 3U;
+    switch (c.source)
+    {
+    case card_source::network_range:
+        REQUIRE(gen.card_valid(c.number));
+        REQUIRE(c.security_code.empty()); // decision 5
+        REQUIRE_FALSE(c.reserved);
+        REQUIRE(c.test_source.empty());
+        break;
+    case card_source::test_number:
+        REQUIRE(gen.card_valid(c.number));
+        REQUIRE(c.security_code.size() == digits);
+        REQUIRE(c.reserved);
+        REQUIRE_FALSE(c.test_source.empty());
+        break;
+    case card_source::wrong_check:
+    {
+        REQUIRE_FALSE(gen.card_valid(c.number));
+        REQUIRE(c.security_code.size() == digits);
+        REQUIRE(c.reserved);
+        // Exactly the Luhn digit is wrong.
+        std::string repaired = c.number;
+        repaired.back() = core::luhn_digit(std::string_view{c.number}.substr(0, c.number.size() - 1));
+        REQUIRE(repaired != c.number);
+        REQUIRE(gen.card_valid(repaired));
+        break;
+    }
+    }
+}
+
+TEST_CASE("every card holds together, from each source and in every country", "[cards]")
+{
+    const auto& gen = shared_generator();
+    const auto source = GENERATE(card_source::network_range, card_source::test_number, card_source::wrong_check);
+    const auto reference = GENERATE(date(2005, 6, 1), date(2023, 7, 1), date(2029, 11, 30));
+    for (const auto& country : gen.countries())
+    {
+        auto q = carded(country.c_str(), {std::nullopt, card_kind::debit, card_kind::credit, card_kind::prepaid}, source);
+        q.reference_date = reference;
+        for (std::uint64_t seed = 0; seed < 40; ++seed)
+        {
+            const auto v = gen.get_finance(q, seed);
+            REQUIRE(v.cards.size() == 4);
+            for (const auto& c : v.cards)
+            {
+                REQUIRE(c.source == source);
+                check_card(gen, c, v.birth_date, reference);
+            }
         }
     }
-
-    // Without a seed the batch still has the requested size.
-    REQUIRE(gen.get_finance_batch(request, {.count = 5}).size() == 5);
 }
 
-TEST_CASE("finance batch: streaming gives the same items in order", "[batch]")
+TEST_CASE("a realistic card's validity is one the network has, and its month is the issue's", "[cards]")
 {
-    auto gen = make_loaded_generator();
-    const auto request = dasmig::finance_request{};
-    const auto batch = gen.get_finance_batch(request, {.count = 300, .first = 10, .threads = 3}, 5);
-    std::uint64_t next = 10;
-    std::size_t seen = 0;
-    gen.for_each_finance(request, {.count = 300, .first = 10, .threads = 3}, 5,
-                        [&](std::uint64_t index, const dasmig::finance& item)
-                        {
-                            REQUIRE(index == next);
-                            REQUIRE(item.to_json() == batch[seen].to_json());
-                            ++next;
-                            ++seen;
-                        });
-    REQUIRE(seen == batch.size());
+    const auto& gen = shared_generator();
+    const auto q = carded("US");
+    std::set<int> seen;
+    for (std::uint64_t seed = 0; seed < 2000; ++seed)
+    {
+        const auto c = gen.get_finance(q, seed).cards.front();
+        REQUIRE(c.expires.month() == c.issued.month());
+        seen.insert(static_cast<int>(c.expires.year()) - static_cast<int>(c.issued.year()));
+    }
+    REQUIRE(seen == std::set<int>{3, 4, 5});
 }
 
-TEST_CASE("finance batch: known answer of 10,000 items", "[batch][kat]")
+TEST_CASE("a test number carries what its sandbox published", "[cards]")
 {
-    auto gen = make_loaded_generator();
-    const auto request = dasmig::finance_request{};
-    std::uint64_t hash = 0xcbf29ce484222325ULL;
-    gen.for_each_finance(request, {.count = 10000, .threads = 4}, 1,
-                        [&](std::uint64_t, const dasmig::finance& item)
-                        { hash = dasmig::core::hash_combine(hash, dasmig::core::fnv1a64(item.to_json())); });
-    REQUIRE(hash == 0x50470532f17ebda1ULL);
+    const auto& gen = shared_generator();
+    std::map<std::pair<std::string, std::string>, row_map> published; // two sandboxes can publish one number
+    for (auto& row : read_table("test_cards.tsv")) published[{row.at("source"), row.at("number")}] = row;
+    std::set<std::string> sources;
+    for (const auto& country : gen.countries())
+    {
+        auto q = carded(country.c_str(), {std::nullopt, card_kind::debit, card_kind::credit}, card_source::test_number);
+        for (std::uint64_t seed = 0; seed < 25; ++seed)
+        {
+            for (const auto& c : gen.get_finance(q, seed).cards)
+            {
+                const auto& row = published.at({c.test_source, c.number});
+                sources.insert(row.at("source"));
+                REQUIRE(c.network == row.at("network"));
+                REQUIRE((row.at("kind") == "any" || row.at("kind") == detail::card_kind_name(c.kind)));
+                REQUIRE((row.at("country_code").empty() || row.at("country_code") == country));
+                if (!row.at("expires").empty()) REQUIRE(iso_month(c.expires) == row.at("expires"));
+                if (!row.at("security_code").empty()) REQUIRE(c.security_code == row.at("security_code"));
+            }
+        }
+    }
+    REQUIRE(sources.contains("stripe"));
+
+    // Germany has a number of its own, and it is not a drawn one.
+    const auto de = gen.get_finance(carded("DE", {card_kind::debit}, card_source::test_number), 1).cards.front();
+    REQUIRE(de.number == "4000002760000016");
+    REQUIRE(de.test_source == "stripe");
+    REQUIRE(iso_month(de.expires) == "2034-12");
+}
+
+TEST_CASE("a person's test numbers differ while another is left", "[cards]")
+{
+    const auto& gen = shared_generator();
+    // Germany lists one number of its own, so the next ones come from the country-free list.
+    const auto q = carded("DE", {card_kind::debit, card_kind::debit, card_kind::credit, std::nullopt}, card_source::test_number);
+    for (std::uint64_t seed = 0; seed < 300; ++seed)
+    {
+        const auto v = gen.get_finance(q, seed);
+        std::set<std::string> numbers;
+        for (const auto& c : v.cards) numbers.insert(c.number);
+        REQUIRE(numbers.size() == v.cards.size());
+        REQUIRE(v.cards.front().number == "4000002760000016");
+    }
+    // One sandbox number for the network and kind: a repeat, rather than an error.
+    auto elo = carded("BR", {card_kind::debit, card_kind::debit}, card_source::test_number);
+    elo.network = "elo";
+    const auto v = gen.get_finance(elo, 1);
+    REQUIRE(v.cards.size() == 2);
+    REQUIRE(v.cards[0].number == v.cards[1].number);
+}
+
+TEST_CASE("an expired test number is not drawn, and none left is an error", "[cards]")
+{
+    using namespace std::chrono;
+    const auto& gen = shared_generator();
+    auto q = carded("BR", {card_kind::debit}, card_source::test_number);
+    q.reference_date = date(2031, 1, 1);
+    for (std::uint64_t seed = 0; seed < 300; ++seed)
+    {
+        const auto v = gen.get_finance(q, seed);
+        check_card(gen, v.cards.front(), v.birth_date, q.reference_date);
+    }
+    q.network = "elo"; // Adyen's only, to 2030-03
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    q.reference_date = date(2030, 3, 31);
+    REQUIRE(iso_month(gen.get_finance(q, 1).cards.front().expires) == "2030-03");
+}
+
+TEST_CASE("the holder is upper-case ASCII of at most 26 characters", "[cards]")
+{
+    const auto holder = [](std::optional<std::string> given, std::optional<std::string> surname)
+    { return detail::make_holder(given, surname); };
+    REQUIRE(holder("Maria", "Garcia") == "MARIA GARCIA");
+    REQUIRE(holder("Mar\xC3\xAD""a Jos\xC3\xA9", "Garc\xC3\xAD""a") == "MARIA JOSE GARCIA");
+    REQUIRE(holder("J.", "O'Brien-N\xC3\xBA\xC3\xB1""ez") == "J O'BRIEN-NUNEZ");
+    REQUIRE(holder("J\xC3\xBCrgen", "Stra\xC3\x9F""e") == "JURGEN STRASSE");
+    REQUIRE(holder(std::nullopt, "Garcia") == "GARCIA");
+    REQUIRE(holder("Maria", std::nullopt) == "MARIA");
+    // Later given names shrink first, then the first, then the end is cut.
+    REQUIRE(holder("Maria Fernanda Alexandra", "Garcia Lopez") == "MARIA F A GARCIA LOPEZ");
+    REQUIRE(holder("Bartholomew Maximilian", "Featherstonehaugh") == "B M FEATHERSTONEHAUGH");
+    const auto cut = holder("Wolfeschlegelsteinhausen", "Bergerdorffvoralternwarengewissenhaft");
+    REQUIRE(cut.size() == 26);
+    REQUIRE(cut.starts_with("W WOLF") == false);
+    REQUIRE(cut.starts_with("W BERGER"));
+    // No Latin form, no guess.
+    REQUIRE(holder("\xD0\x9C\xD0\xB0\xD1\x80\xD0\xB8\xD1\x8F", "Garcia").empty());
+    REQUIRE(holder("Maria", "\xE6\x9D\x8E").empty());
+    REQUIRE(holder("Maria", "Garcia3").empty());
+    REQUIRE(holder(std::nullopt, std::nullopt).empty());
+    REQUIRE(holder("A", std::nullopt).empty());
+
+    const auto& gen = shared_generator();
+    auto q = carded("DE");
+    REQUIRE(gen.get_finance(q, 4).cards.front().holder.empty());
+    q.given_names = "Maria";
+    q.surname = "Garcia";
+    REQUIRE(gen.get_finance(q, 4).cards.front().holder == "MARIA GARCIA");
+}
+
+TEST_CASE("the issuer is the first account's bank, as a label", "[cards]")
+{
+    const auto& gen = shared_generator();
+    auto q = carded("DE");
+    REQUIRE(gen.get_finance(q, 8).cards.front().issuer.empty());
+    q.accounts = {account_kind::current, account_kind::savings};
+    const auto v = gen.get_finance(q, 8);
+    REQUIRE_FALSE(v.accounts.front().bank_name.empty());
+    REQUIRE(v.cards.front().issuer == v.accounts.front().bank_name);
+    q.safe = true;
+    const auto safe = gen.get_finance(q, 8);
+    REQUIRE(safe.cards.front().issuer == safe.accounts.front().bank_name);
+}
+
+TEST_CASE("safe gives test numbers, and refuses network_range", "[cards][safe]")
+{
+    const auto& gen = shared_generator();
+    auto q = carded("KE");
+    q.safe = true;
+    for (std::uint64_t seed = 0; seed < 100; ++seed)
+    {
+        const auto c = gen.get_finance(q, seed).cards.front();
+        REQUIRE(c.source == card_source::test_number);
+        REQUIRE(c.reserved);
+    }
+    q.card_numbers = card_source::wrong_check;
+    REQUIRE(gen.get_finance(q, 1).cards.front().source == card_source::wrong_check);
+    q.card_numbers = card_source::network_range;
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    // Even when no card is asked for: the request is wrong either way.
+    q.cards = {};
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+}
+
+TEST_CASE("wrong_check stays away from networks whose cards may fail Luhn", "[cards][safe]")
+{
+    const auto& gen = shared_generator();
+    const auto q = carded("CN", {card_kind::debit}, card_source::wrong_check);
+    for (std::uint64_t seed = 0; seed < 2000; ++seed)
+    {
+        REQUIRE(gen.get_finance(q, seed).cards.front().network != "unionpay");
+    }
+    auto brazil = carded("BR", {card_kind::debit}, card_source::wrong_check);
+    brazil.weighted = false;
+    for (std::uint64_t seed = 0; seed < 2000; ++seed)
+    {
+        REQUIRE(gen.get_finance(brazil, seed).cards.front().network != "hipercard");
+    }
+    for (const auto* network : {"unionpay", "hipercard", "UnionPay"})
+    {
+        auto named = carded("DE", {card_kind::debit}, card_source::wrong_check);
+        named.network = network;
+        REQUIRE_THROWS_AS(gen.get_finance(named, 1), std::invalid_argument);
+    }
+    // RuPay's 81 and 60 hold UnionPay's 81 and Hipercard's 606282.
+    auto rupay = carded("IN", {card_kind::debit}, card_source::wrong_check);
+    rupay.network = "rupay";
+    for (std::uint64_t seed = 0; seed < 20000; ++seed)
+    {
+        const auto number = gen.get_finance(rupay, seed).cards.front().number;
+        const auto holders = gen.card_networks(number);
+        REQUIRE(std::ranges::find(holders, "unionpay") == holders.end());
+        REQUIRE(std::ranges::find(holders, "hipercard") == holders.end());
+    }
+    // The other two sources still use them.
+    auto range = carded("CN");
+    range.network = "unionpay";
+    REQUIRE(gen.get_finance(range, 1).cards.front().network == "unionpay");
+    range.card_numbers = card_source::test_number;
+    REQUIRE(gen.get_finance(range, 1).cards.front().network == "unionpay");
+}
+
+TEST_CASE("card requests that cannot be met are refused", "[cards][requests]")
+{
+    const auto& gen = shared_generator();
+    auto q = carded("DE");
+    q.network = "bancomat";
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    q.network = "mir"; // no sandbox publishes a Mir number
+    q.card_numbers = card_source::test_number;
+    REQUIRE_THROWS_AS(gen.get_finance(q, 1), std::invalid_argument);
+    q.card_numbers = card_source::network_range;
+    REQUIRE(gen.get_finance(q, 1).cards.front().network == "mir");
+    q.network = "VISA"; // any case
+    REQUIRE(gen.get_finance(q, 1).cards.front().network == "visa");
+}
+
+TEST_CASE("the minimum ages hold, and a card too early is left out", "[cards][requests]")
+{
+    const auto& gen = shared_generator();
+    auto q = carded("DE", {card_kind::debit, card_kind::credit, card_kind::prepaid, std::nullopt});
+    const auto kinds_at = [&](const std::chrono::year_month_day& born, std::uint64_t seed)
+    {
+        q.birth_date = born;
+        std::vector<card_kind> out;
+        for (const auto& c : gen.get_finance(q, seed).cards) out.push_back(c.kind);
+        return out;
+    };
+    for (std::uint64_t seed = 0; seed < 200; ++seed)
+    {
+        // A day short of 16: nothing, and that is no error.
+        REQUIRE(kinds_at(date(2007, 7, 2), seed).empty());
+        // 16: everything but a credit card, and a drawn kind gives way to debit.
+        const auto sixteen = kinds_at(date(2007, 7, 1), seed);
+        REQUIRE(sixteen == std::vector<card_kind>{card_kind::debit, card_kind::prepaid, card_kind::debit});
+        // A day short of 18, the same.
+        REQUIRE(kinds_at(date(2005, 7, 2), seed).size() == 3);
+        // 18: all of them.
+        REQUIRE(kinds_at(date(2005, 7, 1), seed).size() == 4);
+    }
+    // Held from the day they became old enough.
+    q.birth_date = date(2007, 7, 1);
+    REQUIRE(gen.get_finance(q, 1).cards.front().issued == q.reference_date);
+}
+
+TEST_CASE("networks follow the country's bands, and are flat when asked", "[cards][stats]")
+{
+    const auto& gen = shared_generator();
+    const auto rate = [&](finance_request q, const std::string& network)
+    {
+        constexpr int draws = 20000;
+        int hits = 0;
+        for (std::uint64_t seed = 0; seed < draws; ++seed)
+        {
+            hits += gen.get_finance(q, seed).cards.front().network == network ? 1 : 0;
+        }
+        return static_cast<double>(hits) / draws;
+    };
+    REQUIRE_THAT(rate(carded("CN"), "unionpay"), Catch::Matchers::WithinAbs(8.0 / 9.0, 0.01));
+    REQUIRE_THAT(rate(carded("DE"), "visa"), Catch::Matchers::WithinAbs(8.0 / 16.5, 0.012));
+    REQUIRE_THAT(rate(carded("DE"), "amex"), Catch::Matchers::WithinAbs(0.5 / 16.5, 0.01));
+    auto flat = carded("CN");
+    flat.weighted = false;
+    REQUIRE_THAT(rate(flat, "unionpay"), Catch::Matchers::WithinAbs(1.0 / 3.0, 0.015));
+
+    const auto us = gen.networks("us");
+    REQUIRE(std::ranges::find(us, "discover") != us.end());
+    REQUIRE(gen.networks("DE") == std::vector<std::string>{"visa", "mastercard", "amex"});
+    REQUIRE_THROWS_AS(gen.networks("ZZ"), std::invalid_argument);
+}
+
+TEST_CASE("a network's ranges draw by their weights, in its groups", "[cards][stats]")
+{
+    const auto& gen = shared_generator();
+    auto q = carded("DE");
+    q.network = "mastercard";
+    int two_series = 0;
+    constexpr int draws = 20000;
+    for (std::uint64_t seed = 0; seed < draws; ++seed)
+    {
+        const auto c = gen.get_finance(q, seed).cards.front();
+        REQUIRE(c.number.size() == 16);
+        REQUIRE(c.formatted.size() == 19);
+        two_series += c.number.front() == '2' ? 1 : 0;
+    }
+    REQUIRE_THAT(static_cast<double>(two_series) / draws, Catch::Matchers::WithinAbs(0.2, 0.01));
+
+    q.network = "amex";
+    const auto amex = gen.get_finance(q, 1).cards.front();
+    REQUIRE(amex.number.size() == 15);
+    REQUIRE(amex.formatted[4] == ' ');
+    REQUIRE(amex.formatted[11] == ' ');
+    q.network = "diners";
+    for (std::uint64_t seed = 0; seed < 500; ++seed)
+    {
+        const auto c = gen.get_finance(q, seed).cards.front();
+        if (c.number.starts_with("36"))
+        {
+            REQUIRE(c.number.size() == 14);
+            REQUIRE(c.formatted.size() == 16);
+        }
+        else
+        {
+            REQUIRE(c.number.size() == 16);
+        }
+    }
+}
+
+TEST_CASE("kind follows the country's ratio of debit to credit", "[cards][stats]")
+{
+    const auto& gen = shared_generator();
+    const auto q = carded("DE", {std::nullopt});
+    constexpr int draws = 20000;
+    int debit = 0;
+    for (std::uint64_t seed = 0; seed < draws; ++seed)
+    {
+        debit += gen.get_finance(q, seed).cards.front().kind == card_kind::debit ? 1 : 0;
+    }
+    const double d = share_of("DE", "all", "debit");
+    const double c = share_of("DE", "all", "credit");
+    REQUIRE_THAT(static_cast<double>(debit) / draws, Catch::Matchers::WithinAbs(d / (d + c), 0.012));
+}
+
+static double held_rate(const char* country, const std::chrono::year_month_day& born, card_kind kind)
+{
+    const auto& gen = shared_generator();
+    auto q = carded(country, {kind});
+    q.birth_date = born;
+    q.holding = dasmig::ownership::surveyed;
+    constexpr int draws = 20000;
+    int held = 0;
+    for (std::uint64_t seed = 0; seed < draws; ++seed) held += gen.get_finance(q, seed).cards.empty() ? 0 : 1;
+    return static_cast<double>(held) / draws;
+}
+
+TEST_CASE("surveyed holding follows Findex by age, and asked gives everything", "[cards][ownership]")
+{
+    const auto older = date(1980, 1, 1);
+    const auto young = date(2003, 1, 1);
+    for (const auto* country : {"DE", "ET", "BR", "NG"})
+    {
+        REQUIRE_THAT(held_rate(country, older, card_kind::debit), Catch::Matchers::WithinAbs(share_of(country, "older", "debit"), 0.012));
+        REQUIRE_THAT(held_rate(country, young, card_kind::debit), Catch::Matchers::WithinAbs(share_of(country, "young", "debit"), 0.012));
+        REQUIRE_THAT(held_rate(country, older, card_kind::credit), Catch::Matchers::WithinAbs(share_of(country, "older", "credit"), 0.012));
+    }
+    // The design's own numbers, from Findex 2024.
+    REQUIRE(share_of("DE", "all", "debit") > 0.9);
+    REQUIRE(share_of("ET", "all", "debit") < 0.2);
+
+    const auto& gen = shared_generator();
+    auto q = in("ET");
+    q.birth_date = older;
+    q.cards = {card_kind::debit, card_kind::credit};
+    for (std::uint64_t seed = 0; seed < 500; ++seed)
+    {
+        const auto v = gen.get_finance(q, seed);
+        REQUIRE(v.accounts.size() == 1);
+        REQUIRE(v.cards.size() == 2);
+    }
+}
+
+TEST_CASE("surveyed holding is one chance, so a debit holder has an account", "[cards][ownership]")
+{
+    const auto& gen = shared_generator();
+    auto q = in("DE");
+    q.birth_date = date(1980, 1, 1);
+    q.cards = {card_kind::debit, card_kind::prepaid};
+    q.holding = dasmig::ownership::surveyed;
+    REQUIRE(share_of("DE", "older", "debit") <= share_of("DE", "older", "account"));
+    int no_account = 0;
+    for (std::uint64_t seed = 0; seed < 5000; ++seed)
+    {
+        const auto v = gen.get_finance(q, seed);
+        no_account += v.accounts.empty() ? 1 : 0;
+        if (v.accounts.empty()) REQUIRE(v.cards.size() == 1); // prepaid has no share, and has no issuer here
+        if (v.accounts.empty()) REQUIRE(v.cards.front().issuer.empty());
+        if (v.cards.size() == 2) REQUIRE_FALSE(v.accounts.empty());
+    }
+    REQUIRE(no_account > 0);
+}
+
+TEST_CASE("a zero for credit cards in 2024 is not read as nobody holding one", "[cards][ownership]")
+{
+    // Findex 2024 reports 0 for these, whose 2021 values run from 40% to 70%, because
+    // the question was not asked (design 5.5). Shares come from the latest positive year.
+    std::map<std::string, const row_map*> all;
+    const auto table = read_table("ownership.tsv");
+    for (const auto& row : table)
+    {
+        if (row.at("group") == "all") all[row.at("country_code")] = &row;
+    }
+    for (const auto* country : {"US", "DE", "JP", "GB", "FR", "AU", "CA", "KR"})
+    {
+        const auto& row = *all.at(country);
+        INFO(country);
+        REQUIRE(std::stod(row.at("credit")) >= 0.3);
+        REQUIRE(std::stoi(row.at("year")) < 2024);
+        REQUIRE(held_rate(country, date(1980, 1, 1), card_kind::credit) >= 0.25);
+    }
+    // No listed share of 0 for any country, since that would mean nobody ever.
+    for (const auto& row : table)
+    {
+        INFO(row.at("country_code"));
+        REQUIRE(std::stod(row.at("credit")) > 0.0);
+    }
+}
+
+TEST_CASE("cards move no other stream", "[cards][requests]")
+{
+    const auto& gen = shared_generator();
+    finance_request q = in("FR");
+    q.accounts = {account_kind::current};
+    for (std::uint64_t seed = 0; seed < 300; ++seed)
+    {
+        const auto plain = gen.get_finance(q, seed);
+
+        auto with_cards = q;
+        with_cards.cards = {card_kind::debit, card_kind::credit};
+        const auto one = gen.get_finance(with_cards, seed);
+        REQUIRE(one.birth_date == plain.birth_date);
+        REQUIRE(one.accounts.front().iban == plain.accounts.front().iban);
+
+        // Another card leaves the first ones as they were.
+        auto more = with_cards;
+        more.cards.emplace_back(card_kind::prepaid);
+        const auto three = gen.get_finance(more, seed);
+        REQUIRE(three.cards.size() == 3);
+        REQUIRE(three.cards[0].number == one.cards[0].number);
+        REQUIRE(three.cards[1].number == one.cards[1].number);
+        REQUIRE(three.cards[1].issued == one.cards[1].issued);
+
+        // Names change the holder only, and another network the card's number and not its dates' stream.
+        auto named = with_cards;
+        named.given_names = "Ana";
+        named.surname = "Silva";
+        const auto n = gen.get_finance(named, seed);
+        REQUIRE(n.cards[0].number == one.cards[0].number);
+        REQUIRE(n.cards[0].holder == "ANA SILVA");
+    }
+}
+
+TEST_CASE("card_valid and card_networks read the ranges, the length and Luhn", "[cards][builders]")
+{
+    const auto& gen = shared_generator();
+    REQUIRE(gen.card_valid("4242424242424242"));
+    REQUIRE(gen.card_valid("4242 4242 4242 4242"));
+    REQUIRE(gen.card_valid("4242-4242-4242-4242"));
+    REQUIRE(gen.card_valid("378282246310005"));
+    REQUIRE(gen.card_valid("4222222222222")); // Visa's 13 digits
+    REQUIRE_FALSE(gen.card_valid("4242424242424241")); // Luhn
+    REQUIRE_FALSE(gen.card_valid("424242424242")); // length
+    REQUIRE_FALSE(gen.card_valid("3782822463100005")); // Amex has 15
+    REQUIRE_FALSE(gen.card_valid("1234567812345670")); // no network
+    REQUIRE_FALSE(gen.card_valid("4242abcd42424242"));
+    REQUIRE_FALSE(gen.card_valid(""));
+
+    REQUIRE(gen.card_networks("4242424242424242") == std::vector<std::string>{"visa"});
+    REQUIRE(gen.card_networks("4242424242424241") == std::vector<std::string>{"visa"}); // Luhn does not matter here
+    REQUIRE(gen.card_networks("1234567812345670").empty());
+    REQUIRE(gen.card_networks("abc").empty());
+    const auto overlap = gen.card_networks("6500000000000002");
+    REQUIRE(std::ranges::find(overlap, "discover") != overlap.end());
+    REQUIRE(std::ranges::find(overlap, "rupay") != overlap.end());
+}
+
+TEST_CASE("a card avoids another network of its country while a range is left", "[cards][layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    auto q = carded("IN");
+    q.network = "rupay";
+    const auto in_both = [&](std::uint64_t seed)
+    {
+        const auto holders = gen.card_networks(gen.get_finance(q, seed).cards.front().number);
+        return std::ranges::find(holders, "discover") != holders.end() && std::ranges::find(holders, "rupay") != holders.end();
+    };
+    bool overlapped = false;
+    for (std::uint64_t seed = 0; seed < 2000 && !overlapped; ++seed) overlapped = in_both(seed);
+    REQUIRE(overlapped); // Discover is not an Indian network yet
+
+    gen.extend_from_string(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nIN\t*\tdiscover\tcommon\tjudgement\n", "both");
+    q.network = GENERATE("rupay", "discover");
+    for (std::uint64_t seed = 0; seed < 2000; ++seed) REQUIRE_FALSE(in_both(seed));
+}
+
+TEST_CASE("card layers add, and bad ones change nothing", "[cards][layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto hash = gen.data_hash();
+
+    const std::string net = "network\trange_from\trange_to\tlength\tlengths\tweight\tvalidity_years\tmin_age\tformat\tsource\n";
+    gen.extend_from_string(finance_table::networks, net + "bancomat\t9990\t9999\t16\t16\t1\t2\t21\t8-8\tx\n", "new");
+    gen.extend_from_string(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nIT\tdebit\tbancomat\tmain\tjudgement\n", "new");
+    REQUIRE(gen.data_hash() != hash);
+
+    auto q = carded("IT");
+    q.network = "bancomat";
+    const auto c = gen.get_finance(q, 1).cards.front();
+    REQUIRE(c.number.starts_with("999"));
+    REQUIRE(c.formatted.size() == 17);
+    REQUIRE(static_cast<int>(c.expires.year()) - static_cast<int>(c.issued.year()) == 2);
+    // A kind with rows of its own uses them alone; another keeps the rows for every kind.
+    REQUIRE(gen.get_finance(carded("IT"), 1).cards.front().network == "bancomat");
+    const auto credit = gen.get_finance(carded("IT", {card_kind::credit}), 1).cards.front();
+    REQUIRE(credit.network != "bancomat");
+
+    const auto after = gen.data_hash();
+    const auto refused = [&](finance_table table, const std::string& text)
+    {
+        REQUIRE_THROWS(gen.extend_from_string(table, text, "bad"));
+        REQUIRE(gen.data_hash() == after);
+    };
+    refused(finance_table::networks, net + "x\t9\t8\t16\t16\t1\t2\t21\t8-8\tx\n");       // backwards
+    refused(finance_table::networks, net + "x\t9\t9\t11\t11\t1\t2\t21\t\tx\n");          // too short
+    refused(finance_table::networks, net + "x\t9\t9\t16\t15\t1\t2\t21\t\tx\n");          // not among its lengths
+    refused(finance_table::networks, net + "x\t9\t9\t16\t16\t1\t2\t21\t8-7\tx\n");       // groups of another length
+    refused(finance_table::networks, net + "x\t9\t9\t16\t16\t1\t0\t21\t\tx\n");          // no validity
+    refused(finance_table::networks, "network\trange_from\trange_to\tlength\tlengths\tweight\tluhn\nx\t9\t9\t16\t16\t1\tmaybe\n");
+    refused(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nIT\t*\tvisa\tusual\tx\n");
+    refused(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nIT\tgold\tvisa\tmain\tx\n");
+    refused(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nIT\t*\tnosuch\tmain\tx\n");
+    refused(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nZZ\t*\tvisa\tmain\tx\n");
+    const std::string test = "source\tnumber\tnetwork\tkind\tcountry_code\texpires\tsecurity_code\n";
+    refused(finance_table::test_cards, test + "s\t4242424242424241\tvisa\tany\t\t\t\n");           // Luhn
+    refused(finance_table::test_cards, test + "s\t4242424242424242\tamex\tany\t\t\t\n");           // another network's range
+    refused(finance_table::test_cards, test + "s\t5555555555554445\tvisa\tany\t\t\t\n");
+    refused(finance_table::test_cards, test + "s\t4111111111111111\tvisa\tsome\t\t\t\n");
+    refused(finance_table::test_cards, test + "s\t4111111111111111\tvisa\tany\t\t2030\t\n");
+}
+
+TEST_CASE("a unique batch of a finite test list runs out rather than repeat", "[cards][batch]")
+{
+    const auto& gen = shared_generator();
+    const auto q = carded("DE", {card_kind::debit}, card_source::test_number);
+    const auto by_number = core::unique_rule::by<finance>([](const finance& v) { return v.cards.front().number; });
+    REQUIRE_THROWS_AS(gen.get_finance_batch(q, {.count = 2, .unique = by_number}, 3), std::runtime_error);
+    const auto drawn = carded("DE");
+    REQUIRE(gen.get_finance_batch(drawn, {.count = 500, .unique = by_number}, 3).size() == 500);
+}
+
+TEST_CASE("cards in the summary and the JSON", "[cards][conversion][json]")
+{
+    const auto& gen = shared_generator();
+    auto q = in("DE");
+    q.cards = {card_kind::debit};
+    q.card_numbers = card_source::test_number;
+    q.given_names = "Maria";
+    q.surname = "Garcia";
+    const auto v = gen.get_finance(q, 5);
+    const std::string s = v;
+    REQUIRE(s.ends_with("(" + v.accounts.front().bank_name + "), visa debit ...0016"));
+    const auto json = v.to_json();
+    REQUIRE(json.find(R"("cards":[{"network":"visa","kind":"debit","source":"test_number","number":"4000002760000016","formatted":"4000 0027 6000 0016","holder":"MARIA GARCIA",)") != std::string::npos);
+    REQUIRE(json.find(R"("expires":"2034-12","test_source":"stripe","reserved":true}])") != std::string::npos);
+    REQUIRE(gen.get_finance(in("DE"), 5).to_json().find(R"("cards":[])") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// Known answers: the same seed and data give these exact results on every
+// compiler and platform. A change here is a change of output and needs a major
+// version.
+// ---------------------------------------------------------------------------
+
+static const std::uint64_t kat_data_hash = 0x2ef270849d0c325cULL;
+
+TEST_CASE("known answers for fixed seeds", "[kat]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    REQUIRE(gen.data_hash() == kat_data_hash);
+
+    REQUIRE(gen.get_finance(finance_request{}, std::uint64_t{1}).to_json() ==
+            R"x({"country_code":"ES","birth_date":"1958-05-06","accounts":[{"scheme":"iban-es","kind":"current","iban":"ES9001551612513854922663","formatted":"ES90 0155 1612 5138 5492 2663","bank_code":"0155","branch_code":"1612","account_number":"513854922663","bank_name":"BANCO DO BRASIL","bic":"BRASESMM","currency":"EUR","currency_digits":2,"opened":"1983-12-28","evidence":"issuer","reserved":false}],"cards":[],"signature":{"seed":"0000000000000001","data":"2ef270849d0c325c"}})x");
+    finance_request two = in("DE");
+    two.accounts = {account_kind::current, account_kind::savings};
+    REQUIRE(gen.get_finance(two, std::uint64_t{3}).to_json() ==
+            R"x({"country_code":"DE","birth_date":"1961-10-16","accounts":[{"scheme":"iban-de","kind":"current","iban":"DE77870700240795672554","formatted":"DE77 8707 0024 0795 6725 54","bank_code":"87070024","branch_code":"","account_number":"0795672554","bank_name":"Deutsche Bank","bic":"DEUTDEDBCHE","currency":"EUR","currency_digits":2,"opened":"1991-01-31","evidence":"issuer","reserved":false},{"scheme":"iban-de","kind":"savings","iban":"DE85870700000695345904","formatted":"DE85 8707 0000 0695 3459 04","bank_code":"87070000","branch_code":"","account_number":"0695345904","bank_name":"Deutsche Bank","bic":"DEUTDE8CXXX","currency":"EUR","currency_digits":2,"opened":"1985-02-27","evidence":"issuer","reserved":false}],"cards":[],"signature":{"seed":"0000000000000003","data":"2ef270849d0c325c"}})x");
+    finance_request safe = in("IT");
+    safe.safe = true;
+    REQUIRE(gen.get_finance(safe, std::uint64_t{5}).to_json() ==
+            R"x({"country_code":"IT","birth_date":"1966-05-29","accounts":[{"scheme":"iban-it","kind":"current","iban":"IT74D0312675571305157708832","formatted":"IT74 D031 2675 5713 0515 7708 832","bank_code":"03126","branch_code":"75571","account_number":"305157708832","bank_name":"","bic":"","currency":"EUR","currency_digits":2,"opened":"1983-04-14","evidence":"issuer","reserved":true}],"cards":[],"signature":{"seed":"0000000000000005","data":"2ef270849d0c325c"}})x");
+
+    std::uint64_t h = 0xcbf29ce484222325ULL;
+    for (std::uint64_t s = 0; s < 10000; ++s)
+    {
+        for (const char c : gen.get_finance(finance_request{}, s).to_json())
+        {
+            h ^= static_cast<unsigned char>(c);
+            h *= 0x100000001b3ULL;
+        }
+    }
+    REQUIRE(h == 0x670323794f12a085ULL);
+
+    // Only test numbers and wrong Luhn digits are written out: a network_range number may be real.
+    finance_request test = in("DE");
+    test.given_names = "Mar\xC3\xAD""a";
+    test.surname = "Garc\xC3\xAD""a";
+    test.safe = true;
+    test.cards = {card_kind::debit, card_kind::credit, std::nullopt};
+    REQUIRE(gen.get_finance(test, std::uint64_t{7}).to_json() ==
+            R"x({"country_code":"DE","birth_date":"1958-07-27","accounts":[{"scheme":"iban-de","kind":"current","iban":"DE89370400440532013000","formatted":"DE89 3704 0044 0532 0130 00","bank_code":"37040044","branch_code":"","account_number":"0532013000","bank_name":"","bic":"","currency":"EUR","currency_digits":2,"opened":"2004-03-21","evidence":"issuer","reserved":true}],"cards":[{"network":"visa","kind":"debit","source":"test_number","number":"4000002760000016","formatted":"4000 0027 6000 0016","holder":"MARIA GARCIA","issuer":"","security_code":"605","issued":"2020-12-12","expires":"2034-12","test_source":"stripe","reserved":true},{"network":"mastercard","kind":"credit","source":"test_number","number":"2223003122003222","formatted":"2223 0031 2200 3222","holder":"MARIA GARCIA","issuer":"","security_code":"490","issued":"2019-05-07","expires":"2034-12","test_source":"stripe","reserved":true},{"network":"visa","kind":"credit","source":"test_number","number":"4005519200000004","formatted":"4005 5192 0000 0004","holder":"MARIA GARCIA","issuer":"","security_code":"052","issued":"2020-03-19","expires":"2024-03","test_source":"braintree","reserved":true}],"signature":{"seed":"0000000000000007","data":"2ef270849d0c325c"}})x");
+    finance_request wrong = in("CN");
+    wrong.accounts = {};
+    wrong.cards = {card_kind::credit};
+    wrong.card_numbers = card_source::wrong_check;
+    REQUIRE(gen.get_finance(wrong, std::uint64_t{9}).to_json() ==
+            R"x({"country_code":"CN","birth_date":"1984-05-04","accounts":[],"cards":[{"network":"mastercard","kind":"credit","source":"wrong_check","number":"5160464995549375","formatted":"5160 4649 9554 9375","holder":"","issuer":"","security_code":"860","issued":"2023-05-12","expires":"2026-05","test_source":"","reserved":true}],"signature":{"seed":"0000000000000009","data":"2ef270849d0c325c"}})x");
+
+    // The drawn numbers as a hash, since they are not to be spelled out.
+    std::uint64_t cards = 0xcbf29ce484222325ULL;
+    finance_request held;
+    held.cards = {std::nullopt, card_kind::prepaid};
+    held.holding = dasmig::ownership::surveyed;
+    for (std::uint64_t s = 0; s < 10000; ++s)
+    {
+        for (const char c : gen.get_finance(held, s).to_json())
+        {
+            cards ^= static_cast<unsigned char>(c);
+            cards *= 0x100000001b3ULL;
+        }
+    }
+    REQUIRE(cards == 0xd568d9fdbe533f7eULL);
+}
+
+// ---------------------------------------------------------------------------
+// Layers
+// ---------------------------------------------------------------------------
+
+static const char* const bank_header = "scheme\tbank_code\tname\tweight\tbic\n";
+
+TEST_CASE("a layer adds a bank, which is then drawn", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto hash = gen.data_hash();
+    const auto& info = gen.extend_from_string(finance_table::banks, std::string{bank_header} + "iban-ad\t9999\tMy Bank\t1000000\tMYBKADADXXX\n", "mine");
+    REQUIRE(info.added == 1);
+    REQUIRE(gen.data_hash() != hash);
+    REQUIRE(gen.layers(finance_table::banks).size() == 2);
+    int mine = 0;
+    for (std::uint64_t seed = 0; seed < 200; ++seed)
+    {
+        const auto a = gen.get_finance(in("AD"), seed).accounts.front();
+        REQUIRE(core::iban_valid(a.iban));
+        if (a.bank_code == "9999")
+        {
+            ++mine;
+            REQUIRE(a.bank_name == "My Bank");
+            REQUIRE(a.bic == "MYBKADADXXX");
+        }
+    }
+    REQUIRE(mine > 150);
+
+    // Reloading the base drops every layer.
+    gen.load(resource_dir("lite"));
+    REQUIRE(gen.data_hash() == hash);
+}
+
+TEST_CASE("a directory layer adds a country with a national scheme and a test number", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto hash = gen.data_hash();
+    const auto tmp = std::filesystem::temp_directory_path() / "fng_layer_dir";
+    std::filesystem::create_directories(tmp);
+    {
+        std::ofstream{tmp / "countries.tsv"} << "country_code\tpopulation\tcurrency\tcurrency_digits\tprimary_scheme\nXA\t1000\tXAA\t0\txa-num\n";
+        std::ofstream{tmp / "schemes.tsv"} << "key\tcountry\tbuilder\tdisplay\tsafe_method\tevidence\tbank_pattern\tpattern\n"
+                                            << "xa-num\tXA\tnational\t{bank}-{account}\ttest_value\treference\t#{3}\t#{6,8}\n";
+        std::ofstream{tmp / "test_accounts.tsv"} << "source\tscheme\tnumber\tbank_code\taccount_number\nmine\txa-num\t000-123456\t000\t123456\n";
+    }
+    gen.extend(tmp);
+    std::filesystem::remove_all(tmp);
+
+    REQUIRE(gen.data_hash() != hash);
+    REQUIRE(gen.schemes("XA") == std::vector<std::string>{"xa-num"});
+    const auto f = gen.get_finance(in("XA"), 4);
+    const auto& a = f.accounts.front();
+    REQUIRE(a.currency == "XAA");
+    REQUIRE(a.currency_digits == 0);
+    REQUIRE(a.iban.empty());
+    REQUIRE(gen.is_valid("xa-num", a.formatted));
+    REQUIRE(a.formatted == a.bank_code + "-" + a.account_number);
+
+    finance_request q = in("XA");
+    q.safe = true;
+    const auto safe = gen.get_finance(q, 4).accounts.front();
+    REQUIRE(safe.formatted == "000-123456");
+    REQUIRE(safe.bank_code == "000");
+    REQUIRE(safe.account_number == "123456");
+    REQUIRE(safe.reserved);
+}
+
+TEST_CASE("a file layer is named after its table", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto tmp = std::filesystem::temp_directory_path() / "fng_layer_file";
+    std::filesystem::create_directories(tmp);
+    {
+        std::ofstream{tmp / "banks.tsv"} << bank_header << "iban-ad\t9999\tMy Bank\t1\t\n";
+        std::ofstream{tmp / "other.tsv"} << "x\ty\n";
+    }
+    gen.extend(tmp / "banks.tsv");
+    REQUIRE(gen.layers(finance_table::banks).size() == 2);
+    REQUIRE_THROWS_AS(gen.extend(tmp / "other.tsv"), std::invalid_argument);
+    std::filesystem::remove_all(tmp);
+}
+
+TEST_CASE("a disabled row removes its bank", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    gen.extend_from_string(finance_table::banks, std::string{bank_header} + "iban-ad\t9999\tMy Bank\t1000000\t\n", "add");
+    const auto& info = gen.extend_from_string(finance_table::banks, "scheme\tbank_code\tname\tweight\tdisabled\niban-ad\t9999\tx\t1\t1\n", "remove");
+    REQUIRE(info.removed == 1);
+    for (std::uint64_t seed = 0; seed < 200; ++seed) REQUIRE(gen.get_finance(in("AD"), seed).accounts.front().bank_code != "9999");
+}
+
+TEST_CASE("a bad layer changes nothing", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    const auto hash = gen.data_hash();
+    const auto rejected_tsv = [&](finance_table table, const std::string& text)
+    {
+        CAPTURE(text);
+        REQUIRE_THROWS_AS(gen.extend_from_string(table, text, "bad"), core::tsv_error);
+        REQUIRE(gen.data_hash() == hash);
+    };
+    const auto rejected = [&](finance_table table, const std::string& text)
+    {
+        CAPTURE(text);
+        REQUIRE_THROWS_AS(gen.extend_from_string(table, text, "bad"), std::invalid_argument);
+        REQUIRE(gen.data_hash() == hash);
+    };
+    const std::string schemes = "key\tcountry\tbuilder\tdisplay\tsafe_method\tevidence\tcheck\tpattern\n";
+    SECTION("rows that cannot be read")
+    {
+        rejected_tsv(finance_table::schemes, schemes + "x\tDE\tmagic\t{account}\tnone\treference\t\t#{3}\n");
+        rejected_tsv(finance_table::schemes, schemes + "x\tDE\tnational\t{nonsense}\tnone\treference\t\t#{3}\n");
+        rejected_tsv(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\tmaybe\treference\t\t#{3}\n");
+        rejected_tsv(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\tnone\treference\tmod1000\t#{3}\n");
+        rejected_tsv(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\tnone\treference\t\t#{\n");
+        rejected_tsv(finance_table::banks, std::string{bank_header} + "iban-ad\t9999\t\t1\t\n");
+        rejected_tsv(finance_table::banks, std::string{bank_header} + "iban-ad\t9999\tName\t-1\t\n");
+        rejected_tsv(finance_table::banks, std::string{bank_header} + "iban-ad\t9999\tName\t1\tSHORT\n");
+        rejected_tsv(finance_table::banks, "scheme\tbank_code\tname\tweight\tmethod\niban-de\t10000000\tName\t1\tA1\n");
+        rejected_tsv(finance_table::countries, "country_code\tpopulation\tcurrency\tcurrency_digits\tprimary_scheme\nXA\t1\tEURO\t2\tiban-de\n");
+        rejected_tsv(finance_table::iban_formats, "country_code\tbban_pattern\tlength\nXA\t#{10}\t20\n");
+        rejected_tsv(finance_table::iban_formats, "country_code\tbban_pattern\tlength\tbank_from\tbank_to\nXA\t#{10}\t14\t8\t12\n");
+        rejected_tsv(finance_table::iban_formats, "country_code\tbban_pattern\tlength\tcheck_builder\nXA\t#{10}\t14\tes\n");
+        rejected_tsv(finance_table::iban_formats, "country_code\tbban_pattern\tlength\tcheck_builder\nXA\t#{22}\t26\tmod97_bban\n");
+        rejected_tsv(finance_table::test_cards, "source\tnumber\tnetwork\tkind\nmine\t4242424242424241\tvisa\tany\n");
+        rejected_tsv(finance_table::networks, "network\trange_from\trange_to\tlength\tlengths\tweight\nx\t5\t4\t16\t16\t1\n");
+        rejected_tsv(finance_table::card_networks, "country_code\tkind\tnetwork\tband\tevidence\nDE\tdebit\tvisa\tusual\tjudgement\n");
+        rejected_tsv(finance_table::ownership, "country_code\tgroup\taccount\tdebit\tcredit\nDE\tall\t1.5\t0\t0\n");
+    }
+    SECTION("tables that no longer fit together")
+    {
+        rejected(finance_table::schemes, schemes + "x\tZZ\tnational\t{account}\tnone\treference\t\t#{3}\n");
+        rejected(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\twrong_outer\treference\t\t#{3}\n");
+        rejected(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\ttest_value\treference\t\t#{3}\n");
+        rejected(finance_table::schemes, schemes + "x\tDE\tnational\t{account}\tunassigned_code\treference\t\t#{3}\n");
+        rejected(finance_table::schemes, schemes + "x\tXA\tiban\t{iban}\tnone\treference\t\t\n");
+        rejected(finance_table::banks, std::string{bank_header} + "no-such\t9999\tName\t1\t\n");
+        rejected(finance_table::banks, std::string{bank_header} + "iban-ad\t99\tName\t1\t\n");
+        rejected(finance_table::banks, std::string{bank_header} + "iban-ao\t99\tName\t1\t\n");
+        rejected(finance_table::banks, std::string{bank_header} + "au-bsb\t12\tName\t1\t\n");
+        rejected(finance_table::countries, "country_code\tpopulation\tcurrency\tcurrency_digits\tprimary_scheme\nXA\t1\tEUR\t2\tno-such\n");
+        rejected(finance_table::test_accounts, "source\tscheme\tnumber\nmine\tiban-de\tDE00370400440532013000\n");
+        rejected(finance_table::test_accounts, "source\tscheme\tnumber\nmine\tno-such\t1\n");
+    }
+}
+
+TEST_CASE("a replace layer needs the rest of the tables to still fit", "[layers]")
+{
+    fng gen;
+    gen.load(resource_dir("lite"));
+    REQUIRE_THROWS_AS(gen.extend_from_string(finance_table::schemes,
+                                             "key\tcountry\tbuilder\tdisplay\tsafe_method\tevidence\tpattern\n"
+                                             "only\tDE\tnational\t{account}\tnone\treference\t#{3}\n",
+                                             "mine", core::layer_mode::replace),
+                      std::invalid_argument);
 }

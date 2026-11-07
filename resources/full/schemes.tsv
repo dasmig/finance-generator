@@ -1,0 +1,222 @@
+# the account survey, designs/finance-generator-accounts.tsv; each row names its source
+key	country	builder	display	safe_method	evidence	bank_pattern	branch_pattern	pattern	check	list_complete	banks_from	params	source
+ag-bic	AG	bic_account	{account}	none	reference			#{10,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+am-bic	AM	bic_account	{account}	none	reference			#{11,16}					https://docs.stripe.com/connect/payouts-bank-accounts
+ar-cbu	AR	ar_cbu	{bank}{branch}{check1} {account}{check2}	wrong_outer	reference	#{3}	#{4}	#{13}	ar_cbu				https://docs.stripe.com/connect/payouts-bank-accounts; python-stdnum ar.cbu
+au-bsb	AU	national	{bank} {account}	test_value	reference	#{6}		#{6,9}					https://docs.stripe.com/connect/payouts-bank-accounts
+bd-routing	BD	national	{bank}{branch} {account}	none	secondary	#{3}	#{6}	#{13,17}					https://docs.stripe.com/connect/payouts-bank-accounts; https://www.nsave.com/bangladesh/dutch-bangla-bank-routing-numbers
+bn-bic	BN	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+bo-bank	BO	national	{bank} {account}	none	reference	#{3}		#{10,15}					https://docs.stripe.com/connect/payouts-bank-accounts
+bs-bic	BS	bic_account	{account}	none	reference			#{7,10}					https://docs.stripe.com/connect/payouts-bank-accounts
+bt-bic	BT	bic_account	{account}	none	reference			#{10,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+bw-bic	BW	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+ca-transit	CA	national	{branch}-{bank} {account}	none	reference	#{3}	#{5}	#{7,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+cl-bank	CL	national	{bank} {account}	none	reference	#{3}		#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+cn-cnaps	CN	national	{bank}{branch} {account}	none	secondary	#{3}	#{9}	#{19}					https://statrys.com/blog/cnaps-code; https://www.remitbee.com/help/sending-money/bank-requirement-china
+co-bank	CO	national	{bank} {account}	none	reference	#{3}		#{9,16}					https://docs.stripe.com/connect/payouts-bank-accounts
+dz-rib	DZ	national	{bank} {branch} {account}	none	reference	#{5}	#{5}	#{12}					schwifty 2026.11.0 iban_registry; https://docs.stripe.com/connect/payouts-bank-accounts
+ec-bic	EC	bic_account	{account}	none	reference			#{10,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+et-bic	ET	bic_account	{account}	none	reference			#{13,16}					https://docs.stripe.com/connect/payouts-bank-accounts
+generic-af	AF	generic	{account}	none	generic			#{10}					
+generic-bb	BB	generic	{account}	none	generic			#{10}					
+generic-bz	BZ	generic	{account}	none	generic			#{10}					
+generic-cd	CD	generic	{account}	none	generic			#{10}					
+generic-cu	CU	generic	{account}	none	generic			#{10}					
+generic-dm	DM	generic	{account}	none	generic			#{10}					
+generic-er	ER	generic	{account}	none	generic			#{10}					
+generic-fj	FJ	generic	{account}	none	generic			#{10}					
+generic-fm	FM	generic	{account}	none	generic			#{10}					
+generic-gd	GD	generic	{account}	none	generic			#{10}					
+generic-gn	GN	generic	{account}	none	generic			#{10}					
+generic-ht	HT	generic	{account}	none	generic			#{10}					
+generic-kg	KG	generic	{account}	none	generic			#{10}					
+generic-ki	KI	generic	{account}	none	generic			#{10}					
+generic-kn	KN	generic	{account}	none	generic			#{10}					
+generic-kp	KP	generic	{account}	none	generic			#{10}					
+generic-lr	LR	generic	{account}	none	generic			#{10}					
+generic-ls	LS	generic	{account}	none	generic			#{10}					
+generic-mh	MH	generic	{account}	none	generic			#{10}					
+generic-mm	MM	generic	{account}	none	generic			#{10}					
+generic-mv	MV	generic	{account}	none	generic			#{10}					
+generic-mw	MW	generic	{account}	none	generic			#{10}					
+generic-nr	NR	generic	{account}	none	generic			#{10}					
+generic-pg	PG	generic	{account}	none	generic			#{10}					
+generic-pw	PW	generic	{account}	none	generic			#{10}					
+generic-sb	SB	generic	{account}	none	generic			#{10}					
+generic-sl	SL	generic	{account}	none	generic			#{10}					
+generic-sr	SR	generic	{account}	none	generic			#{10}					
+generic-ss	SS	generic	{account}	none	generic			#{10}					
+generic-sy	SY	generic	{account}	none	generic			#{10}					
+generic-sz	SZ	generic	{account}	none	generic			#{10}					
+generic-tj	TJ	generic	{account}	none	generic			#{10}					
+generic-tm	TM	generic	{account}	none	generic			#{10}					
+generic-to	TO	generic	{account}	none	generic			#{10}					
+generic-tv	TV	generic	{account}	none	generic			#{10}					
+generic-vc	VC	generic	{account}	none	generic			#{10}					
+generic-vu	VU	generic	{account}	none	generic			#{10}					
+generic-ws	WS	generic	{account}	none	generic			#{10}					
+generic-zm	ZM	generic	{account}	none	generic			#{10}					
+generic-zw	ZW	generic	{account}	none	generic			#{10}					
+gh-sort	GH	national	{bank} {account}	none	reference	#{6}		#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+gm-bic	GM	bic_account	{account}	none	reference			#{18}					https://docs.stripe.com/connect/payouts-bank-accounts
+gy-bic	GY	bic_account	{account}	none	reference			#{10,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+hk-clearing	HK	national	{bank}-{branch}-{account}	none	reference	#{3}	#{3}	#{6,9}					https://docs.stripe.com/connect/payouts-bank-accounts
+iban-ad	AD	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ae	AE	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-al	AL	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ao	AO	iban	{iban}	wrong_outer	reference								https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-at	AT	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-ax	AX	iban	{iban}	wrong_national	issuer				fi		iban-fi		schwifty 2026.11.0 iban_registry
+iban-az	AZ	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ba	BA	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-be	BE	iban	{iban}	test_value	issuer				be	1			schwifty 2026.11.0 iban_registry
+iban-bf	BF	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-bg	BG	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-bh	BH	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-bi	BI	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-bj	BJ	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-bl	BL	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-br	BR	iban_br	{bank} {branch} {account}	wrong_outer	issuer	#{3}	#{4}	#{7,10}					schwifty 2026.11.0 iban_registry
+iban-by	BY	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-cf	CF	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-cg	CG	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-ch	CH	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-ci	CI	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-cm	CM	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-cr	CR	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-cv	CV	iban	{iban}	wrong_outer	reference								schwifty 2026.11.0 iban_registry
+iban-cy	CY	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-cz	CZ	iban	{iban}	unassigned_code	issuer				cz	1			schwifty 2026.11.0 iban_registry
+iban-de	DE	iban	{iban}	test_value	issuer				de_method	1			schwifty 2026.11.0 iban_registry
+iban-dj	DJ	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-dk	DK	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-do	DO	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ee	EE	iban	{iban}	test_value	issuer				ee	1			schwifty 2026.11.0 iban_registry
+iban-eg	EG	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-es	ES	iban	{iban}	test_value	issuer				es	1			schwifty 2026.11.0 iban_registry
+iban-fi	FI	iban	{iban}	test_value	issuer				fi	1			schwifty 2026.11.0 iban_registry
+iban-fk	FK	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-fo	FO	iban	{iban}	wrong_outer	issuer						iban-dk		schwifty 2026.11.0 iban_registry
+iban-fr	FR	iban	{iban}	test_value	issuer				rib_key				schwifty 2026.11.0 iban_registry
+iban-ga	GA	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-gb	GB	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-ge	GE	iban	{iban}	unassigned_code	issuer					1			schwifty 2026.11.0 iban_registry
+iban-gf	GF	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-gg	GG	iban	{iban}	wrong_outer	issuer						iban-gb		schwifty 2026.11.0 iban_registry
+iban-gi	GI	iban	{iban}	test_value	issuer								schwifty 2026.11.0 iban_registry
+iban-gl	GL	iban	{iban}	wrong_outer	issuer						iban-dk		schwifty 2026.11.0 iban_registry
+iban-gp	GP	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-gq	GQ	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-gr	GR	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-gt	GT	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-gw	GW	iban	{iban}	wrong_outer	reference								schwifty 2026.11.0 iban_registry
+iban-hn	HN	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-hr	HR	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-hu	HU	iban	{iban}	unassigned_code	issuer					1			schwifty 2026.11.0 iban_registry
+iban-ie	IE	iban	{iban}	test_value	issuer								schwifty 2026.11.0 iban_registry
+iban-il	IL	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-im	IM	iban	{iban}	wrong_outer	issuer						iban-gb		schwifty 2026.11.0 iban_registry
+iban-iq	IQ	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ir	IR	iban	{iban}	wrong_outer	reference								schwifty 2026.11.0 iban_registry
+iban-is	IS	iban	{iban}	wrong_national	issuer				is				schwifty 2026.11.0 iban_registry
+iban-it	IT	iban	{iban}	unassigned_code	issuer				it_cin	1			schwifty 2026.11.0 iban_registry
+iban-je	JE	iban	{iban}	wrong_outer	issuer						iban-gb		schwifty 2026.11.0 iban_registry
+iban-jo	JO	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-km	KM	iban	{iban}	wrong_outer	reference								schwifty 2026.11.0 iban_registry
+iban-kw	KW	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-kz	KZ	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-lb	LB	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-lc	LC	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-li	LI	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-lt	LT	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-lu	LU	iban	{iban}	test_value	issuer								schwifty 2026.11.0 iban_registry
+iban-lv	LV	iban	{iban}	unassigned_code	issuer					1			schwifty 2026.11.0 iban_registry
+iban-ly	LY	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ma	MA	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-mc	MC	iban	{iban}	wrong_national	issuer				rib_key				schwifty 2026.11.0 iban_registry
+iban-md	MD	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-me	ME	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-mf	MF	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-mg	MG	iban	{iban}	wrong_outer	reference								https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-mk	MK	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-ml	ML	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-mn	MN	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-mq	MQ	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-mr	MR	iban	{iban}	wrong_national	issuer				mod97_variant				schwifty 2026.11.0 iban_registry
+iban-mt	MT	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-mu	MU	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-mz	MZ	iban	{iban}	wrong_outer	reference								https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-nc	NC	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-ne	NE	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-ni	NI	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-nl	NL	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-no	NO	iban	{iban}	test_value	issuer				no	1			schwifty 2026.11.0 iban_registry
+iban-om	OM	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-pf	PF	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-pk	PK	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-pl	PL	iban	{iban}	unassigned_code	issuer				pl	1			schwifty 2026.11.0 iban_registry
+iban-pm	PM	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-ps	PS	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-pt	PT	iban	{iban}	test_value	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-qa	QA	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-re	RE	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-ro	RO	iban	{iban}	unassigned_code	issuer					1			schwifty 2026.11.0 iban_registry
+iban-rs	RS	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-ru	RU	iban_ru	{bank} {account}	wrong_national	issuer	#{9}		40817810#{12}	ru_key				schwifty 2026.11.0 iban_registry
+iban-sa	SA	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-sc	SC	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-sd	SD	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-se	SE	iban	{iban}	test_value	issuer					1			schwifty 2026.11.0 iban_registry
+iban-si	SI	iban	{iban}	unassigned_code	issuer				mod97_bban	1			schwifty 2026.11.0 iban_registry
+iban-sk	SK	iban	{iban}	unassigned_code	issuer				cz	1			schwifty 2026.11.0 iban_registry
+iban-sm	SM	iban	{iban}	wrong_national	issuer				it_cin				schwifty 2026.11.0 iban_registry
+iban-sn	SN	iban	{iban}	wrong_national	reference				rib_key				https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry
+iban-so	SO	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-st	ST	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-sv	SV	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-td	TD	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-tf	TF	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-tg	TG	iban	{iban}	wrong_national	reference				rib_key				schwifty 2026.11.0 iban_registry
+iban-tl	TL	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-tn	TN	iban	{iban}	wrong_national	issuer				mod97_variant				schwifty 2026.11.0 iban_registry
+iban-tr	TR	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-ua	UA	iban	{iban}	unassigned_code	issuer					1			schwifty 2026.11.0 iban_registry
+iban-va	VA	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-vg	VG	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-wf	WF	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+iban-xk	XK	iban	{iban}	wrong_national	issuer				mod97_bban				schwifty 2026.11.0 iban_registry
+iban-ye	YE	iban	{iban}	wrong_outer	issuer								schwifty 2026.11.0 iban_registry
+iban-yt	YT	iban	{iban}	wrong_national	issuer				rib_key		iban-fr		schwifty 2026.11.0 iban_registry
+id-bank	ID	national	{bank} {account}	none	reference	#{3}		#{10,15}					https://docs.stripe.com/connect/payouts-bank-accounts; https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+in-ifsc	IN	national	{bank}0{branch} {account}	none	reference	@{4}	*{6}	#{9,18}					https://docs.stripe.com/connect/payouts-bank-accounts; https://en.wikipedia.org/wiki/Indian_Financial_System_Code
+jm-bank	JM	national	{bank}-{branch} {account}	none	reference	#{3}	#{5}	#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+jp-zengin	JP	national	{bank}-{branch}-{account}	none	reference	#{4}	#{3}	#{7}					https://docs.stripe.com/connect/payouts-bank-accounts; https://www.remitly.com/blog/money-transfer/what-is-a-zengin-code-japans-bank-codes-explained
+ke-bic	KE	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+kh-bic	KH	bic_account	{account}	none	reference			#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+kr-bic	KR	bic_account	{account}	none	reference			#{11,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+la-bic	LA	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+lk-bank	LK	bic_account	{branch} {account}	none	reference		#{7}	#{10,18}					https://docs.stripe.com/connect/payouts-bank-accounts
+mo-bic	MO	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+mx-clabe	MX	mx_clabe	{bank} {branch} {account} {check}	wrong_outer	reference	#{3}	#{3}	#{11}	mx_clabe				https://docs.stripe.com/connect/payouts-bank-accounts; https://www.imss.gob.mx/node/98887; https://cdn.jsdelivr.net/npm/clabe-validator@3.2.1/README.md
+my-bic	MY	bic_account	{account}	none	reference			#{10,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+na-bic	NA	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+ng-nuban	NG	ng_nuban	{bank} {account}{check}	wrong_outer	issuer	#{3}		#{9}	ng_nuban				https://www.cbn.gov.ng/Out/2020/PSMD/REVISED STANDARDS ON NIGERIA UNIFORM BANK ACCOUNT NUMBER (NUBAN) FOR BANKS AND OTHER FINANCIAL INSTITUTIONS .pdf
+np-bank	NP	national	{bank}-{branch} {account}	none	secondary	#{4}	#{4}	#{14,16}					https://nchl.com.np/wp-content/uploads/2026/01/Branches.pdf
+nz-account	NZ	nz_account	{bank}-{branch}-{account}-{suffix}	wrong_outer	reference	#{2}	#{4}	#{7}	nz_account			suffix=#{2,3}	https://docs.stripe.com/connect/payouts-bank-accounts; python-stdnum nz.bankaccount
+pa-bic	PA	bic_account	{account}	none	reference			#{10,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+pe-cci	PE	national	{bank}-{branch}-{account}	none	secondary	#{3}	#{3}	#{14}					https://docs.stripe.com/connect/payouts-bank-accounts; https://www.bbva.com/es/pe/salud-financiera/los-codigos-de-las-entidades-bancarias-en-el-peru/
+ph-bic	PH	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+py-bank	PY	national	{bank} {account}	none	reference	#{2}		#{9,16}					https://docs.stripe.com/connect/payouts-bank-accounts
+rw-bic	RW	bic_account	{account}	none	reference			#{10,13}					https://docs.stripe.com/connect/payouts-bank-accounts
+sg-bank	SG	national	{bank}-{branch}-{account}	none	reference	#{4}	#{3}	#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+th-bank	TH	national	{bank} {account}	none	reference	#{3}		#{10,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+tt-bank	TT	national	{bank}-{branch} {account}	none	reference	#{3}	#{5}	#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+tw-bic	TW	bic_account	{account}	none	reference			#{12,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+tz-bic	TZ	bic_account	{account}	none	reference			#{10,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+ug-bic	UG	bic_account	{account}	none	reference			#{10,14}					https://docs.dlocal.com/docs/uganda-payouts-v3
+us-aba	US	us_aba	{bank} {account}	test_value	reference	#{9}		#{9,12}	us_aba				https://docs.stripe.com/connect/payouts-bank-accounts; https://frbservices.org/binaries/content/assets/crsocms/resources/rules-regulations/051526-operating-circular-5.pdf; https://wwwkc.fiscal.treasury.gov/Data/FSv49/TRXv10/transmission/Summary/BankDetail/AgentBank/index.html
+uy-bank	UY	national	{bank} {account}	none	reference	#{3}		#{9,12}					https://docs.stripe.com/connect/payouts-bank-accounts
+uz-bic	UZ	bic_account	{account}	none	reference			#{16,20}					https://docs.stripe.com/connect/payouts-bank-accounts
+ve-account	VE	national	{bank}{account}	none	secondary	#{4}		#{16}					https://elyex.com/como-saber-mi-numero-de-cuenta-banesco-en-venezuela/
+vn-bank	VN	national	{bank} {account}	none	reference	#{8}		#{8,14}					https://docs.stripe.com/connect/payouts-bank-accounts
+za-bic	ZA	bic_account	{account}	none	reference			#{9,11}					https://docs.stripe.com/connect/payouts-bank-accounts

@@ -1,0 +1,222 @@
+# finance-generator account survey, 2026-11-06. evidence: issuer (an authority's or the registry's own rule), reference (a payment provider's or a library's table), secondary (guides and press), generic. See designs/finance-generator.md 4.3.
+country	name	population	scheme	klass	structure	check	banks	evidence	source	note
+IN	India	1417492000	in-ifsc	national	IFSC @{4}0*{6} + account varies by bank	none known	razorpay/ifsc (MIT)	reference	https://docs.stripe.com/connect/payouts-bank-accounts; https://en.wikipedia.org/wiki/Indian_Financial_System_Code	9-18 digits is a secondary figure
+CN	China	1408280000	cn-cnaps	national	CNAPS #{12}: 3 bank, 4 area, 4 branch, 1 check + account usually 19, 16-19 digits	rule not found	to find; GLEIF for names	secondary	https://statrys.com/blog/cnaps-code; https://www.remitbee.com/help/sending-money/bank-requirement-china	absent from Stripe's table; sources are remittance guides and split the code differently; CNAPS check rule not found
+US	United States	340110988	us-aba	national	routing #{9}, prefix 00-12, 21-32, 61-72, 80 + account varies by bank	routing 3-7-1 mod 10	curated from banks' own pages; FDIC for deposits	reference	https://docs.stripe.com/connect/payouts-bank-accounts; https://frbservices.org/binaries/content/assets/crsocms/resources/rules-regulations/051526-operating-circular-5.pdf; https://wwwkc.fiscal.treasury.gov/Data/FSv49/TRXv10/transmission/Summary/BankDetail/AgentBank/index.html	Fed directory: OC5 section 4 says not sell, relicense or distribute
+ID	Indonesia	284438782	id-bank	national	bank code 3-4 digits + account varies by bank	none known	press lists of Bank Indonesia codes	reference	https://docs.stripe.com/connect/payouts-bank-accounts; https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank	lists disagree on BSI (451 against 422/427)
+PK	Pakistan	241499431	iban-pk	iban	PK + 4!a16!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+NG	Nigeria	223800000	ng-nuban	national_check	16 digits: 6 institution, 9 serial, 1 check; the customer sees the last 10	3-7-3 over 15 digits, 10 - mod 10, 10 becomes 0	CBN codes; OFIs are 9 + a 5-digit code	issuer	https://www.cbn.gov.ng/Out/2020/PSMD/REVISED STANDARDS ON NIGERIA UNIFORM BANK ACCOUNT NUMBER (NUBAN) FOR BANKS AND OTHER FINANCIAL INSTITUTIONS .pdf	deposit banks' 3 leading zeros cancel, so the old 3 + 9 rule still holds
+BR	Brazil	213421037	iban-br	iban	BR + 8!c5!n10!n1!c1!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	everyday form: bank 3 digits, agency 4, account varies (Stripe); the IBAN's bank field is 8 characters, so the bank table needs both codes
+BD	Bangladesh	169828911	bd-routing	national	routing #{9}: 3 bank, 2 district, 3 branch, 1 check + account 13-17 digits	rule not found	Bangladesh Bank (not read)	secondary	https://docs.stripe.com/connect/payouts-bank-accounts; https://www.nsave.com/bangladesh/dutch-bangla-bank-routing-numbers	routing check rule not found
+RU	Russia	146028325	iban-ru	iban	RU + 9!n5!n15!c	RU key: 7-1-3 with the BIK	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	everyday form: BIK 9 digits + 20-digit account (SAP, Remitly); account key 7-1-3 over BIK's last 3 + account, mod 10 = 0, passes on a public correspondent account; authority not read
+MX	Mexico	130575786	mx-clabe	national_check	18 digits: 3 bank, 3 plaza, 11 account, 1 check	3-7-1 mod 10	Banxico SPEI participants (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts; https://www.imss.gob.mx/node/98887; https://cdn.jsdelivr.net/npm/clabe-validator@3.2.1/README.md	structure from IMSS; weights not on an authority's page read so far
+JP	Japan	123210000	jp-zengin	national	bank #{4} + branch #{3} + account usually 7 digits, 4-8 allowed	none known	zengin-code (no licence stated); facts from Zengin-Net	reference	https://docs.stripe.com/connect/payouts-bank-accounts; https://www.remitly.com/blog/money-transfer/what-is-a-zengin-code-japans-bank-codes-explained	account type futsu or toza; Japan Post Bank converts its own numbers
+PH	Philippines	114123600	ph-bic	bic_account	BIC + account up to 17 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+CD	DR Congo	112832000	generic-cd	generic	#{10}	none	GLEIF BIC names, else empty	generic		searched: BCC Instruction 28 (2017) standardised the format, but no page read gives the structure; https://www.tmb.cd/en/wp-json/wp/v2/posts/9653
+ET	Ethiopia	111652998	et-bic	bic_account	BIC + account 13-16 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+EG	Egypt	107271260	iban-eg	iban	EG + 4!n4!n17!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+VN	Vietnam	101343800	vn-bank	national	bank code #{8} + account 1-17 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+IR	Iran	85961000	iban-ir	iban_unregistered	IR + 22 digits	MOD 97 only	to find	reference	schwifty 2026.11.0 iban_registry	absent from Stripe's table; bank position not in the source
+TR	Türkiye	85664944	iban-tr	iban	TR + 5!n1!n16!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+DE	Germany	83491249	iban-de	iban	DE + 8!n10!n	per bank: method column	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+GB	United Kingdom	69281437	iban-gb	iban	GB + 4!a6!n8!n	MOD 97 only	authority's file, script in schwifty + schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	everyday form: sort code 6 digits + account 8 (Stripe); both are inside the IBAN
+TZ	Tanzania	68153004	tz-bic	bic_account	BIC + account 10-14 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+FR	France	66351959	iban-fr	iban	FR + 5!n5!n11!c2!n	FR key	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+TH	Thailand	65859640	th-bank	national	bank code 3 characters + account 6-15 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+ZA	South Africa	63100945	za-bic	bic_account	BIC + account up to 16 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+IT	Italy	58927633	iban-it	iban	IT + 1!a5!n5!n12!c	IT CIN	authority's file, script in schwifty + schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+KE	Kenya	53330978	ke-bic	bic_account	BIC + account up to 32 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	very wide limit; shape unknown
+CO	Colombia	53057212	co-bank	national	bank code #{3} + account 9-16 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	the provider also asks for the account type
+SD	Sudan	51662000	iban-sd	iban	SD + 2!n12!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+MM	Myanmar	51316756	generic-mm	generic	#{10}	none	GLEIF BIC names, else empty	generic		searched: no format found
+KR	South Korea	51159889	kr-bic	bic_account	BIC + account 11-15 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+ES	Spain	49315949	iban-es	iban	ES + 4!n4!n1!n1!n10!n	ES rule	authority's file, script in schwifty + schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+DZ	Algeria	47400000	dz-rib	national	22 digits: 5 bank, 5 branch, 10 account, 2 key	key rule not confirmed	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry; https://docs.stripe.com/connect/payouts-bank-accounts	conflict: Stripe says a 20-character account
+AR	Argentina	46735004	ar-cbu	national_check	22 digits: 8 bank and branch, 14 account	3-1-7-9 from the right, per group	BCRA (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts; python-stdnum ar.cbu	Stripe's sample passes
+IQ	Iraq	46118793	iban-iq	iban	IQ + 4!a3!n12!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+UG	Uganda	45905417	ug-bic	bic_account	BIC + account up to 18 digits	none known	GLEIF BIC names	reference	https://docs.dlocal.com/docs/uganda-payouts-v3	absent from Stripe's table
+AF	Afghanistan	43844000	generic-af	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+CA	Canada	41651653	ca-transit	national	transit #{5} + institution #{3} + account varies by bank	none known	Payments Canada (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+UZ	Uzbekistan	37859698	uz-bic	bic_account	BIC + account 5-20 digits, branch #{5}	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+PL	Poland	37392000	iban-pl	iban	PL + 8!n16!n	PL rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+MA	Morocco	36828330	iban-ma	iban_unregistered	MA + 24 digits: 3 bank, 3 branch, 16 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key reproduced on the sample on Stripe's page
+AO	Angola	36170961	iban-ao	iban_unregistered	AO + 21 digits	MOD 97 only	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	Stripe's sample does not fit the zone key formula; national key unknown
+SA	Saudi Arabia	35300280	iban-sa	iban	SA + 2!n18!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+PE	Peru	34350244	pe-cci	national_check	20 digits: 3 bank, 3 branch, 12 account, 2 check	alternating 1-2, digit sum, 10 - mod 10, per group	SBS (not read)	secondary	https://docs.stripe.com/connect/payouts-bank-accounts; https://www.bbva.com/es/pe/salud-financiera/los-codigos-de-las-entidades-bancarias-en-el-peru/	WEAK: rule recalled from memory, no authority found; fits Stripe's one sample only; a second sample is needed before shipping it
+MY	Malaysia	34231700	my-bic	bic_account	BIC + account 5-17 digits, varies by bank	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+MZ	Mozambique	34090466	iban-mz	iban_unregistered	MZ + 21 digits	MOD 97 only	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	bank position not in the source; Stripe calls it an account number
+GH	Ghana	33742380	gh-sort	national	sort code #{6} + account 8-20 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+UA	Ukraine	32862000	iban-ua	iban	UA + 6!n19!c	MOD 97 only	authority's file, script in schwifty + schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+YE	Yemen	32684503	iban-ye	iban	YE + 4!a4!n18!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+MG	Madagascar	31727042	iban-mg	iban_unregistered	MG + 23 digits	MOD 97 only	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	Stripe's sample is a placeholder and fails the key; national key unknown
+CI	Ivory Coast	31719275	iban-ci	iban_unregistered	CI + 24 characters: 5 bank (2 letters), 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key reproduced on the sample on Stripe's page
+NP	Nepal	29911840	np-bank	national	bank #{4} + branch #{4} + account varies by bank; 14 and 16 digits seen	none known	NCHL branch list	secondary	https://nchl.com.np/wp-content/uploads/2026/01/Branches.pdf	absent from Stripe's table; one site says a 3-digit bank code, the clearing house's list shows 4
+CM	Cameroon	29442327	iban-cm	iban_unregistered	CM + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+VE	Venezuela	28517000	ve-account	national	bank #{4} + account 20 digits in all, the rest not confirmed	rule not found	SUDEBAN codes (not read)	secondary	https://elyex.com/como-saber-mi-numero-de-cuenta-banesco-en-venezuela/	WEAK: one consumer page; no check rule found; Spain's CCC is not this
+AU	Australia	27536874	au-bsb	national	BSB #{6} + account 4-9 digits	none known	AusPayNet (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts	Stripe's test BSB is 000000
+NE	Niger	26312034	iban-ne	iban_unregistered	NE + 24 characters: 5 bank (2 letters), 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key reproduced on the sample on Stripe's page
+KP	North Korea	25950000	generic-kp	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+SY	Syria	25620000	generic-sy	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+BF	Burkina Faso	24070553	iban-bf	iban_unregistered	BF + 24 characters: 5 bank, 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+TW	Taiwan	23317031	tw-bic	bic_account	BIC + account 10-14 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+ML	Mali	22395489	iban-ml	iban_unregistered	ML + 24 characters: 5 bank, 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+LK	Sri Lanka	21763170	lk-bank	national	bank code 11 characters + branch #{7} + account 10-18 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+MW	Malawi	20734262	generic-mw	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+KZ	Kazakhstan	20426568	iban-kz	iban	KZ + 3!n13!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+CL	Chile	20206953	cl-bank	national	bank code #{3} + account 5-25 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	the provider also asks for the account type
+ZM	Zambia	19693423	generic-zm	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+SO	Somalia	19655000	iban-so	iban	SO + 4!n3!n12!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+TD	Chad	19340757	iban-td	iban_unregistered	TD + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+RO	Romania	19036031	iban-ro	iban	RO + 4!a16!c	MOD 97 only	authority's file, script in schwifty + schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+SN	Senegal	18593258	iban-sn	iban_unregistered	SN + 24 characters: 5 bank (2 letters), 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key reproduced on the sample on Stripe's page
+EC	Ecuador	18103660	ec-bic	bic_account	BIC + account 5-18 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+NL	Netherlands	18100436	iban-nl	iban	NL + 4!a10!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	no national check: banks set the last 10 digits themselves since 2020-01-01 (schwifty, banken.nl); the old 11-test holds only for accounts issued before then
+GT	Guatemala	18079810	iban-gt	iban	GT + 4!c20!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KH	Cambodia	17577760	kh-bic	bic_account	BIC + account 5-15 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+ZW	Zimbabwe	17073087	generic-zw	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+SS	South Sudan	15786898	generic-ss	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+GN	Guinea	14363931	generic-gn	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+RW	Rwanda	14104969	rw-bic	bic_account	BIC + account 1-15 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+BJ	Benin	13224860	iban-bj	iban_unregistered	BJ + 24 characters: 5 bank (2 letters), 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key reproduced on the sample on Stripe's page
+BI	Burundi	12332788	iban-bi	iban	BI + 5!n5!n11!n2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+TN	Tunisia	11972169	iban-tn	iban	TN + 2!n3!n13!n2!n	MOD 97-10 variant	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+HT	Haiti	11867032	generic-ht	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+BE	Belgium	11825551	iban-be	iban	BE + 3!n7!n2!n	BE rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+PG	Papua New Guinea	11781559	generic-pg	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+JO	Jordan	11734000	iban-jo	iban	JO + 4!a4!n18!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+BO	Bolivia	11365333	bo-bank	national	bank code 1-3 digits + account 10-15 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+AE	United Arab Emirates	11294243	iban-ae	iban	AE + 3!n16!n	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+CZ	Czechia	10882341	iban-cz	iban	CZ + 4!n6!n10!n	CZ rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+DO	Dominican Republic	10771504	iban-do	iban	DO + 4!c20!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PT	Portugal	10749635	iban-pt	iban	PT + 4!n4!n11!n2!n	MOD 97-10 on the BBAN	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+SE	Sweden	10605098	iban-se	iban	SE + 3!n16!n1!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+TJ	Tajikistan	10499000	generic-tj	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+GR	Greece	10400720	iban-gr	iban	GR + 3!n4!n16!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+AZ	Azerbaijan	10241722	iban-az	iban	AZ + 4!a20!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+IL	Israel	10134800	iban-il	iban	IL + 3!n3!n13!n	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+HN	Honduras	9892632	iban-hn	iban	HN + 4!a20!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+CU	Cuba	9748007	generic-cu	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+HU	Hungary	9539502	iban-hu	iban	HU + 3!n4!n1!n15!n1!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+AT	Austria	9200931	iban-at	iban	AT + 5!n11!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+BY	Belarus	9109280	iban-by	iban	BY + 4!c4!n16!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+CH	Switzerland	9082848	iban-ch	iban	CH + 5!n12!c	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+SL	Sierra Leone	9077691	generic-sl	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+TG	Togo	8095498	iban-tg	iban_unregistered	TG + 24 characters: 5 bank, 5 branch, 12 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+LA	Laos	7647000	la-bic	bic_account	BIC + account 1-18 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+HK	Hong Kong	7527500	hk-clearing	national	clearing #{3} + branch #{3} + account 6-9 characters	none known	HKMA (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+LY	Libya	7459000	iban-ly	iban	LY + 3!n3!n15!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KG	Kyrgyzstan	7281800	generic-kg	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+TM	Turkmenistan	7057841	generic-tm	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+NI	Nicaragua	6803886	iban-ni	iban	NI + 4!a20!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+RS	Serbia	6567783	iban-rs	iban	RS + 3!n13!n2!n	MOD 97-10 on the BBAN	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+CF	Central African Republic	6470307	iban-cf	iban_unregistered	CF + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+BG	Bulgaria	6437360	iban-bg	iban	BG + 4!a4!n2!n8!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+CG	Congo	6142180	iban-cg	iban_unregistered	CG + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+SG	Singapore	6110200	sg-bank	national	bank #{4} + branch #{3} + account 6-19 characters	none known	MAS (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+PY	Paraguay	6109644	py-bank	national	bank code 1-2 digits + account up to 16 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+SV	El Salvador	6029976	iban-sv	iban	SV + 4!a20!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+DK	Denmark	6011488	iban-dk	iban	DK + 4!n9!n1!n	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+FI	Finland	5650325	iban-fi	iban	FI + 3!n11!n	FI rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+NO	Norway	5606944	iban-no	iban	NO + 4!n6!n1!n	NO rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+LB	Lebanon	5490000	iban-lb	iban	LB + 4!n20!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PS	Palestine	5483450	iban-ps	iban	PS + 4!a21!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+IE	Ireland	5458600	iban-ie	iban	IE + 4!a6!n8!n	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+SK	Slovakia	5413813	iban-sk	iban	SK + 4!n6!n10!n	CZ rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+OM	Oman	5343630	iban-om	iban	OM + 3!n16!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+NZ	New Zealand	5324700	nz-account	national_check	15-16 digits: 2 bank, 4 branch, 7 account, 2-3 suffix	weighted mod 11 or mod 10 by bank	Payments NZ (not read)	reference	https://docs.stripe.com/connect/payouts-bank-accounts; python-stdnum nz.bankaccount	seven methods by bank in stdnum
+CR	Costa Rica	5309625	iban-cr	iban	CR + 4!n14!n	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+LR	Liberia	5248621	generic-lr	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+MR	Mauritania	4927532	iban-mr	iban	MR + 5!n5!n11!n2!n	MOD 97-10 variant	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KW	Kuwait	4881254	iban-kw	iban	KW + 4!a22!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PA	Panama	4064780	pa-bic	bic_account	BIC + account 1-18 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+GE	Georgia	4000921	iban-ge	iban	GE + 2!a16!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+HR	Croatia	3866233	iban-hr	iban	HR + 7!n10!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+ER	Eritrea	3607000	generic-er	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+MN	Mongolia	3544835	iban-mn	iban	MN + 4!n12!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+UY	Uruguay	3499451	uy-bank	national	bank code #{3} + account up to 12 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+BA	Bosnia and Herzegovina	3422000	iban-ba	iban	BA + 3!n3!n8!n2!n	MOD 97-10 on the BBAN	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+QA	Qatar	3173024	iban-qa	iban	QA + 4!a21!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+AM	Armenia	3076200	am-bic	bic_account	BIC + account 11-16 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+NA	Namibia	3022401	na-bic	bic_account	BIC + account 8-13 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+LT	Lithuania	2894886	iban-lt	iban	LT + 5!n11!n	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+JM	Jamaica	2825544	jm-bank	national	bank #{3} + branch #{5} + account up to 18 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+MD	Moldova	2749076	iban-md	iban	MD + 2!c18!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+GA	Gabon	2469296	iban-ga	iban_unregistered	GA + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts; schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own; Stripe confirms 23 digits
+GM	Gambia	2422712	gm-bic	bic_account	BIC + account 18 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+AL	Albania	2363314	iban-al	iban	AL + 8!n16!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+BW	Botswana	2359609	bw-bic	bic_account	BIC + account 1-16 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+SI	Slovenia	2130638	iban-si	iban	SI + 5!n8!n2!n	MOD 97-10 on the BBAN	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+LS	Lesotho	2116427	generic-ls	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+LV	Latvia	1829000	iban-lv	iban	LV + 4!a13!c	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+MK	North Macedonia	1822612	iban-mk	iban	MK + 3!n10!c2!n	MOD 97-10 on the BBAN	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+GW	Guinea-Bissau	1781308	iban-gw	iban_unregistered	GW + 21 characters	MOD 97 only	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	conflict: 21 characters in the source, but UEMOA's siblings have 24
+GQ	Equatorial Guinea	1668768	iban-gq	iban_unregistered	GQ + 23 digits: 5 bank, 5 branch, 11 account, 2 key	97-(body00 mod 97), French letter values	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	key formula assumed from the zone's samples; no sample of its own
+BH	Bahrain	1594654	iban-bh	iban	BH + 4!a14!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+XK	Kosovo	1585566	iban-xk	iban	XK + 4!n10!n2!n	MOD 97-10 on the BBAN	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+CY	Cyprus	1442614	iban-cy	iban	CY + 3!n5!n16!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+TL	Timor-Leste	1391221	iban-tl	iban	TL + 3!n14!n2!n	MOD 97-10 on the BBAN	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+EE	Estonia	1369995	iban-ee	iban	EE + 2!n2!n11!n1!n	EE rule	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+TT	Trinidad and Tobago	1367764	tt-bank	national	bank #{3} + branch #{5} + account up to 17 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	
+MU	Mauritius	1243741	iban-mu	iban	MU + 4!a2!n2!n12!n3!n3!a	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+SZ	Eswatini	1235549	generic-sz	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+DJ	Djibouti	1066809	iban-dj	iban	DJ + 23!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KM	Comoros	919901	iban-km	iban_unregistered	KM + 23 digits	MOD 97 only	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	bank position not in the source
+FJ	Fiji	900869	generic-fj	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+RE	Réunion	896175	iban-re	territory	RE + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+BT	Bhutan	784043	bt-bic	bic_account	BIC + account 1-17 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+GY	Guyana	772975	gy-bic	bic_account	BIC + account 1-32 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	very wide limit; shape unknown
+SB	Solomon Islands	750325	generic-sb	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+MO	Macau	685900	mo-bic	bic_account	BIC + account 1-19 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+LU	Luxembourg	681973	iban-lu	iban	LU + 3!n13!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+ME	Montenegro	623327	iban-me	iban	ME + 3!n13!n2!n	MOD 97-10 on the BBAN	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+SR	Suriname	616500	generic-sr	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+MT	Malta	574250	iban-mt	iban	MT + 4!a5!n18!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+MV	Maldives	515132	generic-mv	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+CV	Cape Verde	491233	iban-cv	iban_unregistered	CV + 21 digits: 4 bank, 4 branch, 11 account, 2 key	MOD 97 only	GLEIF BIC names	reference	schwifty 2026.11.0 iban_registry	national key not tested
+BN	Brunei	455500	bn-bic	bic_account	BIC + account 1-13 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+BZ	Belize	417634	generic-bz	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+BS	Bahamas	398165	bs-bic	bic_account	BIC + account 1-10 digits	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	length is a validator's limit, not the bank's shape
+IS	Iceland	391810	iban-is	iban	IS + 4!n2!n6!n10!n	IS rule	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+GP	Guadeloupe	378561	iban-gp	territory	GP + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+MQ	Martinique	349925	iban-mq	territory	MQ + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+VU	Vanuatu	321409	generic-vu	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+YT	Mayotte	320901	iban-yt	territory	YT + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+GF	French Guiana	292354	iban-gf	territory	GF + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PF	French Polynesia	279500	iban-pf	territory	PF + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+BB	Barbados	267800	generic-bb	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+NC	New Caledonia	264596	iban-nc	territory	NC + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+ST	São Tomé and Príncipe	209607	iban-st	iban	ST + 4!n4!n11!n2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+WS	Samoa	205557	generic-ws	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+LC	Saint Lucia	184100	iban-lc	iban	LC + 4!a24!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+SC	Seychelles	122729	iban-sc	iban	SC + 4!a2!n2!n16!n3!a	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KI	Kiribati	120740	generic-ki	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+VC	Saint Vincent and the Grenadines	110872	generic-vc	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+GD	Grenada	109021	generic-gd	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+FM	Micronesia	105564	generic-fm	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+AG	Antigua and Barbuda	103603	ag-bic	bic_account	BIC + account 1-32 characters	none known	GLEIF BIC names	reference	https://docs.stripe.com/connect/payouts-bank-accounts	very wide limit; shape unknown
+JE	Jersey	103267	iban-je	territory	JE + 4!a6!n8!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+TO	Tonga	100179	generic-to	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+AD	Andorra	88406	iban-ad	iban	AD + 4!n4!n12!c	MOD 97 only	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+IM	Isle of Man	84530	iban-im	territory	IM + 4!a6!n8!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+DM	Dominica	67408	generic-dm	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+GG	Guernsey	64781	iban-gg	territory	GG + 4!a6!n8!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+GL	Greenland	56542	iban-gl	territory	GL + 4!n9!n1!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+FO	Faroe Islands	54885	iban-fo	territory	FO + 4!n9!n1!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+KN	Saint Kitts and Nevis	51320	generic-kn	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+MH	Marshall Islands	42418	generic-mh	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+LI	Liechtenstein	40900	iban-li	iban	LI + 5!n12!c	MOD 97 only	authority's file, script in schwifty	issuer	schwifty 2026.11.0 iban_registry	
+VG	British Virgin Islands	39471	iban-vg	territory	VG + 4!a16!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+MC	Monaco	38423	iban-mc	iban	MC + 5!n5!n11!c2!n	FR key	schwifty hand-kept (MIT)	issuer	schwifty 2026.11.0 iban_registry	
+GI	Gibraltar	38000	iban-gi	territory	GI + 4!a15!c	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+SM	San Marino	34132	iban-sm	iban	SM + 1!a5!n5!n12!c	IT CIN	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+MF	Saint Martin	31496	iban-mf	territory	MF + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+AX	Åland Islands	30654	iban-ax	territory	AX + 3!n11!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PW	Palau	16733	generic-pw	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+NR	Nauru	11680	generic-nr	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+WF	Wallis and Futuna	11620	iban-wf	territory	WF + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+TV	Tuvalu	10643	generic-tv	generic	#{10}	none	GLEIF BIC names, else empty	generic		absent from Stripe's table and schwifty; not individually searched
+BL	Saint Barthélemy	10562	iban-bl	territory	BL + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+PM	Saint Pierre and Miquelon	5819	iban-pm	territory	PM + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+FK	Falkland Islands	3662	iban-fk	territory	FK + 2!a12!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+VA	Vatican City	882	iban-va	iban	VA + 3!n15!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	
+TF	French Southern and Antarctic Lands	400	iban-tf	territory	TF + 5!n5!n11!c2!n	MOD 97 only	GLEIF BIC names	issuer	schwifty 2026.11.0 iban_registry	

@@ -1,0 +1,222 @@
+# country-generator (population, currency, minor unit); the account survey (scheme)
+country_code	population	currency	currency_digits	primary_scheme	territory
+AD	88406	EUR	2	iban-ad	
+AE	11294243	AED	2	iban-ae	
+AF	43844000	AFN	2	generic-af	
+AG	103603	XCD	2	ag-bic	
+AL	2363314	ALL	2	iban-al	
+AM	3076200	AMD	2	am-bic	
+AO	36170961	AOA	2	iban-ao	
+AR	46735004	ARS	2	ar-cbu	
+AT	9200931	EUR	2	iban-at	
+AU	27536874	AUD	2	au-bsb	
+AX	30654	EUR	2	iban-ax	1
+AZ	10241722	AZN	2	iban-az	
+BA	3422000	BAM	2	iban-ba	
+BB	267800	BBD	2	generic-bb	
+BD	169828911	BDT	2	bd-routing	
+BE	11825551	EUR	2	iban-be	
+BF	24070553	XOF	0	iban-bf	
+BG	6437360	BGN	2	iban-bg	
+BH	1594654	BHD	3	iban-bh	
+BI	12332788	BIF	0	iban-bi	
+BJ	13224860	XOF	0	iban-bj	
+BL	10562	EUR	2	iban-bl	1
+BN	455500	BND	2	bn-bic	
+BO	11365333	BOB	2	bo-bank	
+BR	213421037	BRL	2	iban-br	
+BS	398165	BSD	2	bs-bic	
+BT	784043	BTN	2	bt-bic	
+BW	2359609	BWP	2	bw-bic	
+BY	9109280	BYN	2	iban-by	
+BZ	417634	BZD	2	generic-bz	
+CA	41651653	CAD	2	ca-transit	
+CD	112832000	CDF	2	generic-cd	
+CF	6470307	XAF	0	iban-cf	
+CG	6142180	XAF	0	iban-cg	
+CH	9082848	CHF	2	iban-ch	
+CI	31719275	XOF	0	iban-ci	
+CL	20206953	CLP	0	cl-bank	
+CM	29442327	XAF	0	iban-cm	
+CN	1408280000	CNY	2	cn-cnaps	
+CO	53057212	COP	2	co-bank	
+CR	5309625	CRC	2	iban-cr	
+CU	9748007	CUC	2	generic-cu	
+CV	491233	CVE	2	iban-cv	
+CY	1442614	EUR	2	iban-cy	
+CZ	10882341	CZK	2	iban-cz	
+DE	83491249	EUR	2	iban-de	
+DJ	1066809	DJF	0	iban-dj	
+DK	6011488	DKK	2	iban-dk	
+DM	67408	XCD	2	generic-dm	
+DO	10771504	DOP	2	iban-do	
+DZ	47400000	DZD	2	dz-rib	
+EC	18103660	USD	2	ec-bic	
+EE	1369995	EUR	2	iban-ee	
+EG	107271260	EGP	2	iban-eg	
+ER	3607000	ERN	2	generic-er	
+ES	49315949	EUR	2	iban-es	
+ET	111652998	ETB	2	et-bic	
+FI	5650325	EUR	2	iban-fi	
+FJ	900869	FJD	2	generic-fj	
+FK	3662	FKP	2	iban-fk	1
+FM	105564	USD	2	generic-fm	
+FO	54885	DKK	2	iban-fo	1
+FR	66351959	EUR	2	iban-fr	
+GA	2469296	XAF	0	iban-ga	
+GB	69281437	GBP	2	iban-gb	
+GD	109021	XCD	2	generic-gd	
+GE	4000921	GEL	2	iban-ge	
+GF	292354	EUR	2	iban-gf	1
+GG	64781	GBP	2	iban-gg	1
+GH	33742380	GHS	2	gh-sort	
+GI	38000	GIP	2	iban-gi	1
+GL	56542	DKK	2	iban-gl	1
+GM	2422712	GMD	2	gm-bic	
+GN	14363931	GNF	0	generic-gn	
+GP	378561	EUR	2	iban-gp	1
+GQ	1668768	XAF	0	iban-gq	
+GR	10400720	EUR	2	iban-gr	
+GT	18079810	GTQ	2	iban-gt	
+GW	1781308	XOF	0	iban-gw	
+GY	772975	GYD	2	gy-bic	
+HK	7527500	HKD	2	hk-clearing	
+HN	9892632	HNL	2	iban-hn	
+HR	3866233	EUR	2	iban-hr	
+HT	11867032	HTG	2	generic-ht	
+HU	9539502	HUF	2	iban-hu	
+ID	284438782	IDR	2	id-bank	
+IE	5458600	EUR	2	iban-ie	
+IL	10134800	ILS	2	iban-il	
+IM	84530	GBP	2	iban-im	1
+IN	1417492000	INR	2	in-ifsc	
+IQ	46118793	IQD	3	iban-iq	
+IR	85961000	IRR	2	iban-ir	
+IS	391810	ISK	0	iban-is	
+IT	58927633	EUR	2	iban-it	
+JE	103267	GBP	2	iban-je	1
+JM	2825544	JMD	2	jm-bank	
+JO	11734000	JOD	3	iban-jo	
+JP	123210000	JPY	0	jp-zengin	
+KE	53330978	KES	2	ke-bic	
+KG	7281800	KGS	2	generic-kg	
+KH	17577760	KHR	2	kh-bic	
+KI	120740	AUD	2	generic-ki	
+KM	919901	KMF	0	iban-km	
+KN	51320	XCD	2	generic-kn	
+KP	25950000	KPW	2	generic-kp	
+KR	51159889	KRW	0	kr-bic	
+KW	4881254	KWD	3	iban-kw	
+KZ	20426568	KZT	2	iban-kz	
+LA	7647000	LAK	2	la-bic	
+LB	5490000	LBP	2	iban-lb	
+LC	184100	XCD	2	iban-lc	
+LI	40900	CHF	2	iban-li	
+LK	21763170	LKR	2	lk-bank	
+LR	5248621	LRD	2	generic-lr	
+LS	2116427	LSL	2	generic-ls	
+LT	2894886	EUR	2	iban-lt	
+LU	681973	EUR	2	iban-lu	
+LV	1829000	EUR	2	iban-lv	
+LY	7459000	LYD	3	iban-ly	
+MA	36828330	MAD	2	iban-ma	
+MC	38423	EUR	2	iban-mc	
+MD	2749076	MDL	2	iban-md	
+ME	623327	EUR	2	iban-me	
+MF	31496	EUR	2	iban-mf	1
+MG	31727042	MGA	2	iban-mg	
+MH	42418	USD	2	generic-mh	
+MK	1822612	MKD	2	iban-mk	
+ML	22395489	XOF	0	iban-ml	
+MM	51316756	MMK	2	generic-mm	
+MN	3544835	MNT	2	iban-mn	
+MO	685900	MOP	2	mo-bic	
+MQ	349925	EUR	2	iban-mq	1
+MR	4927532	MRU	2	iban-mr	
+MT	574250	EUR	2	iban-mt	
+MU	1243741	MUR	2	iban-mu	
+MV	515132	MVR	2	generic-mv	
+MW	20734262	MWK	2	generic-mw	
+MX	130575786	MXN	2	mx-clabe	
+MY	34231700	MYR	2	my-bic	
+MZ	34090466	MZN	2	iban-mz	
+NA	3022401	NAD	2	na-bic	
+NC	264596	XPF	0	iban-nc	1
+NE	26312034	XOF	0	iban-ne	
+NG	223800000	NGN	2	ng-nuban	
+NI	6803886	NIO	2	iban-ni	
+NL	18100436	EUR	2	iban-nl	
+NO	5606944	NOK	2	iban-no	
+NP	29911840	NPR	2	np-bank	
+NR	11680	AUD	2	generic-nr	
+NZ	5324700	NZD	2	nz-account	
+OM	5343630	OMR	3	iban-om	
+PA	4064780	PAB	2	pa-bic	
+PE	34350244	PEN	2	pe-cci	
+PF	279500	XPF	0	iban-pf	1
+PG	11781559	PGK	2	generic-pg	
+PH	114123600	PHP	2	ph-bic	
+PK	241499431	PKR	2	iban-pk	
+PL	37392000	PLN	2	iban-pl	
+PM	5819	EUR	2	iban-pm	1
+PS	5483450	EGP	2	iban-ps	
+PT	10749635	EUR	2	iban-pt	
+PW	16733	USD	2	generic-pw	
+PY	6109644	PYG	0	py-bank	
+QA	3173024	QAR	2	iban-qa	
+RE	896175	EUR	2	iban-re	1
+RO	19036031	RON	2	iban-ro	
+RS	6567783	RSD	2	iban-rs	
+RU	146028325	RUB	2	iban-ru	
+RW	14104969	RWF	0	rw-bic	
+SA	35300280	SAR	2	iban-sa	
+SB	750325	SBD	2	generic-sb	
+SC	122729	SCR	2	iban-sc	
+SD	51662000	SDG	2	iban-sd	
+SE	10605098	SEK	2	iban-se	
+SG	6110200	SGD	2	sg-bank	
+SI	2130638	EUR	2	iban-si	
+SK	5413813	EUR	2	iban-sk	
+SL	9077691	SLE	2	generic-sl	
+SM	34132	EUR	2	iban-sm	
+SN	18593258	XOF	0	iban-sn	
+SO	19655000	SOS	2	iban-so	
+SR	616500	SRD	2	generic-sr	
+SS	15786898	SSP	2	generic-ss	
+ST	209607	STN	2	iban-st	
+SV	6029976	USD	2	iban-sv	
+SY	25620000	SYP	2	generic-sy	
+SZ	1235549	SZL	2	generic-sz	
+TD	19340757	XAF	0	iban-td	
+TF	400	EUR	2	iban-tf	1
+TG	8095498	XOF	0	iban-tg	
+TH	65859640	THB	2	th-bank	
+TJ	10499000	TJS	2	generic-tj	
+TL	1391221	USD	2	iban-tl	
+TM	7057841	TMT	2	generic-tm	
+TN	11972169	TND	3	iban-tn	
+TO	100179	TOP	2	generic-to	
+TR	85664944	TRY	2	iban-tr	
+TT	1367764	TTD	2	tt-bank	
+TV	10643	AUD	2	generic-tv	
+TW	23317031	TWD	2	tw-bic	
+TZ	68153004	TZS	2	tz-bic	
+UA	32862000	UAH	2	iban-ua	
+UG	45905417	UGX	0	ug-bic	
+US	340110988	USD	2	us-aba	
+UY	3499451	UYU	2	uy-bank	
+UZ	37859698	UZS	2	uz-bic	
+VA	882	EUR	2	iban-va	
+VC	110872	XCD	2	generic-vc	
+VE	28517000	VES	2	ve-account	
+VG	39471	USD	2	iban-vg	1
+VN	101343800	VND	0	vn-bank	
+VU	321409	VUV	0	generic-vu	
+WF	11620	XPF	0	iban-wf	1
+WS	205557	WST	2	generic-ws	
+XK	1585566	EUR	2	iban-xk	
+YE	32684503	YER	2	iban-ye	
+YT	320901	EUR	2	iban-yt	1
+ZA	63100945	ZAR	2	za-bic	
+ZM	19693423	ZMW	2	generic-zm	
+ZW	17073087	ZWL	2	generic-zw	
