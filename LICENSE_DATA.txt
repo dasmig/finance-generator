@@ -1,3 +1,48 @@
-The data in the resources/ directory is a sample written for this library.
-List each source here with its licence before the first release (see
-doc/data.md).
+Data sources of finance-generator. The code is under LICENSE; this file covers resources/.
+Per-table detail is in doc/data.md. The IBAN Registry entry below is provisional: SWIFT's
+licence clause has not yet been read in full, and the first release waits on that.
+
+SWIFT BIC/LEI Mapping Table (BICs marked gleif in banks.tsv), through GLEIF, version of
+October 2026. The agreement requires this notice on any copy, in whole or in part:
+
+  SWIFT © and database rights October 2026. All rights reserved.
+  This Mapping Table has been developed by SWIFT. Any use of the Mapping Table, in whole or
+  in part, is subject to the BIC/LEI Mapping Table License Agreement as published with the
+  Mapping Table available on GLEIF's website.
+  The Mapping Table is updated monthly. For the latest BIC information and updates, always
+  refer to www.swift.com/bic .
+
+GLEIF LEI records (entity names): CC0 1.0. https://www.gleif.org/en/about/open-data
+
+SWIFT IBAN Registry, release 99 (iban_formats.tsv), read through schwifty's parsed copy.
+SWIFT's terms are to be confirmed before release.
+
+schwifty 2026.11.0 (bank lists, IBAN positions and forms outside the registry): MIT.
+Copyright (c) 2021 Martin Domke. https://github.com/mdomke/schwifty
+
+razorpay/ifsc (India's banks and branches): MIT. Copyright (c) 2020 Razorpay.
+https://github.com/razorpay/ifsc
+
+zengin-code/source-data (Japan's banks and branches): no licence stated by the project. Only
+codes, names and branch counts are used. https://github.com/zengin-code/source-data
+
+Banco Central do Brasil, STR participants (Brazil's banks): public file.
+https://www.bcb.gov.br/content/estabilidadefinanceira/str1/ParticipantesSTR.csv
+
+Bank of Russia, BIK directory ED807 (Russia's banks): public file. https://www.cbr.ru/s/newbik
+
+FDIC BankFind (US deposits, used as weights): a US federal agency's data; its documentation
+states no terms. The US routing numbers are curated from public pages, not from the Federal
+Reserve's E-Payments Routing Directory, whose terms do not allow redistribution.
+
+The World Bank: Global Findex Database 2025: Data source (ownership.tsv): CC BY 4.0 under the
+World Bank's dataset terms, with their additional dispute clause.
+https://www.worldbank.org/en/publication/globalfindex
+
+ActiveMerchant (Elo and Hipercard ranges in networks.tsv): MIT. Copyright (c) 2005-2010 Tobias
+Luetke. https://github.com/activemerchant/active_merchant
+
+country-generator (population, currency, minor unit): see that library's LICENSE_DATA.txt.
+
+Test numbers are the published sandbox values of Stripe, Adyen and Braintree, each row naming
+its source. They are facts used to test against those sandboxes.

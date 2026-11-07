@@ -1,0 +1,23 @@
+# Stripe's published test values, read 2026-11-06; several are well-known examples at real banks' codes
+source	scheme	number	bank_code	branch_code	account_number
+stripe	iban-at	AT611904300234573201			
+stripe	iban-be	BE62510007547061			
+stripe	iban-ch	CH9300762011623852957			
+stripe	iban-de	DE89370400440532013000			
+stripe	iban-ee	EE382200221020145685			
+stripe	iban-es	ES0700120345030000067890			
+stripe	iban-fi	FI2112345600000785			
+stripe	iban-fr	FR1420041010050500013M02606			
+stripe	iban-gb	GB82WEST12345698765432			
+stripe	iban-gi	GI60MPFS599327643783385			
+stripe	iban-hr	HR7624020064583467589			
+stripe	iban-ie	IE29AIBK93115212345678			
+stripe	iban-li	LI0508800636123378777			
+stripe	iban-lt	LT121000011101001000			
+stripe	iban-lu	LU280019400644750000			
+stripe	iban-nl	NL39RABO0300065264			
+stripe	iban-no	NO9386011117947			
+stripe	iban-pt	PT50000201231234567890154			
+stripe	iban-se	SE3550000000054910000003			
+stripe	us-aba	110000000 000123456789	110000000		000123456789
+stripe	au-bsb	000000 000123456	000000		000123456

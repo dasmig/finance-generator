@@ -1,0 +1,56 @@
+# How each non-IBAN scheme is built, from the survey's structure column. An account length inside a provider's limit is a judgement (design 4.3). pe-cci and dz-rib draw their check digits as plain digits: pe-cci's rule has one sample, dz-rib's key is unconfirmed (design 4.3), so both ship with structure only.
+scheme	builder	bank_pattern	branch_pattern	account_pattern	display	params
+in-ifsc	national	@{4}	*{6}	#{9,18}	{bank}0{branch} {account}
+cn-cnaps	national	#{3}	#{9}	#{19}	{bank}{branch} {account}
+us-aba	us_aba	#{9}		#{9,12}	{bank} {account}
+id-bank	national	#{3}		#{10,15}	{bank} {account}
+ng-nuban	ng_nuban	#{3}		#{9}	{account}{check}
+bd-routing	national	#{3}	#{6}	#{13,17}	{bank}{branch} {account}
+mx-clabe	mx_clabe	#{3}	#{3}	#{11}	{bank} {branch} {account} {check}
+jp-zengin	national	#{4}	#{3}	#{7}	{bank}-{branch}-{account}
+ph-bic	bic_account			#{10,13}	{account}
+et-bic	bic_account			#{13,16}	{account}
+vn-bank	national	#{8}		#{8,14}	{bank} {account}
+tz-bic	bic_account			#{10,14}	{account}
+th-bank	national	#{3}		#{10,12}	{bank} {account}
+za-bic	bic_account			#{9,11}	{account}
+ke-bic	bic_account			#{10,13}	{account}
+co-bank	national	#{3}		#{9,16}	{bank} {account}
+kr-bic	bic_account			#{11,14}	{account}
+dz-rib	national	#{5}	#{5}	#{12}	{bank} {branch} {account}
+ar-cbu	ar_cbu	#{3}	#{4}	#{13}	{bank}{branch}{check1} {account}{check2}
+ca-transit	national	#{3}	#{5}	#{7,12}	{branch}-{bank} {account}
+uz-bic	bic_account			#{16,20}	{account}
+pe-cci	national	#{3}	#{3}	#{14}	{bank}-{branch}-{account}
+my-bic	bic_account			#{10,14}	{account}
+gh-sort	national	#{6}		#{10,13}	{bank} {account}
+au-bsb	national	#{6}		#{6,9}	{bank} {account}
+tw-bic	bic_account			#{12,14}	{account}
+lk-bank	bic_account		#{7}	#{10,18}	{branch} {account}
+cl-bank	national	#{3}		#{9,12}	{bank} {account}
+ec-bic	bic_account			#{10,12}	{account}
+kh-bic	bic_account			#{9,12}	{account}
+rw-bic	bic_account			#{10,13}	{account}
+bo-bank	national	#{3}		#{10,15}	{bank} {account}
+la-bic	bic_account			#{10,13}	{account}
+hk-clearing	national	#{3}	#{3}	#{6,9}	{bank}-{branch}-{account}
+sg-bank	national	#{4}	#{3}	#{9,12}	{bank}-{branch}-{account}
+py-bank	national	#{2}		#{9,16}	{bank} {account}
+nz-account	nz_account	#{2}	#{4}	#{7}	{bank}-{branch}-{account}-{suffix}	suffix=#{2,3}
+pa-bic	bic_account			#{10,12}	{account}
+uy-bank	national	#{3}		#{9,12}	{bank} {account}
+am-bic	bic_account			#{11,16}	{account}
+na-bic	bic_account			#{10,13}	{account}
+jm-bank	national	#{3}	#{5}	#{9,12}	{bank}-{branch} {account}
+gm-bic	bic_account			#{18}	{account}
+bw-bic	bic_account			#{10,13}	{account}
+tt-bank	national	#{3}	#{5}	#{9,12}	{bank}-{branch} {account}
+bt-bic	bic_account			#{10,14}	{account}
+mo-bic	bic_account			#{10,13}	{account}
+bn-bic	bic_account			#{10,13}	{account}
+bs-bic	bic_account			#{7,10}	{account}
+gy-bic	bic_account			#{10,12}	{account}
+ag-bic	bic_account			#{10,12}	{account}
+np-bank	national	#{4}	#{4}	#{14,16}	{bank}-{branch} {account}
+ug-bic	bic_account			#{10,14}	{account}
+ve-account	national	#{4}		#{16}	{bank}{account}

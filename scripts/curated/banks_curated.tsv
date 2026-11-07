@@ -1,0 +1,43 @@
+# Bank codes read from a source, for schemes with no list a script can fetch; each row names the page it was checked on. A US routing number is one that bank's accounts use; banks hold several, by state. weight "fdic" takes the deposits of the FDIC certificate in key.
+scheme	bank_code	name	weight	source	key
+us-aba	021000021	JPMorgan Chase Bank	fdic	https://www.bankbranchlocator.com/chase-bank-routing-numbers.html	628
+us-aba	082000073	Bank of America	fdic	https://www.bankbranchlocator.com/bank-of-america-routing-numbers.html	3510
+us-aba	121042882	Wells Fargo Bank	fdic	https://www.bankbranchlocator.com/wells-fargo-bank-routing-numbers.html	3511
+us-aba	021000089	Citibank	fdic	https://visbanking.com/routing-numbers?q=CITI	7213
+us-aba	122235821	U.S. Bank	fdic	https://www.bankbranchlocator.com/us-bank-routing-numbers.html	6548
+us-aba	043000096	PNC Bank	fdic	https://www.bankbranchlocator.com/pnc-bank-routing-numbers.html	6384
+us-aba	011103093	TD Bank	fdic	https://www.bankbranchlocator.com/td-bank-routing-numbers.html	18409
+us-aba	051405515	Capital One	fdic	https://visbanking.com/routing-numbers?q=CAPITAL+ONE	4297
+us-aba	061000104	Truist Bank	fdic	https://www.bankbranchlocator.com/truist-bank-routing-numbers.html	9846
+mx-clabe	002	Banamex	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	012	BBVA	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	014	Santander	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	021	HSBC	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	036	Inbursa	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	044	Scotiabank	1	https://en.wikipedia.org/wiki/CLABE
+mx-clabe	072	Banorte	1	https://en.wikipedia.org/wiki/CLABE
+ng-nuban	044	Access Bank	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	011	First Bank of Nigeria	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	033	United Bank for Africa	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	057	Zenith Bank	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	058	Guaranty Trust Bank	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	070	Fidelity Bank	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ng-nuban	214	First City Monument Bank	1	https://youverify.co/en/blogs/list-of-nigerian-bank-codes-and-sort-codes
+ca-transit	001	Bank of Montreal	1	https://www.nerdwallet.com/ca/p/article/banking/bank-institution-number
+ca-transit	002	Scotiabank	1	https://www.nerdwallet.com/ca/p/article/banking/bank-institution-number
+ca-transit	003	Royal Bank of Canada	1	https://www.nerdwallet.com/ca/p/article/banking/bank-institution-number
+ca-transit	004	Toronto-Dominion Bank	1	https://www.nerdwallet.com/ca/p/article/banking/bank-institution-number
+ca-transit	006	National Bank of Canada	1	https://www.nerdwallet.com/ca/p/article/banking/bank-institution-number
+ca-transit	010	Canadian Imperial Bank of Commerce	1	https://en.wikipedia.org/wiki/Routing_number_(Canada)
+cn-cnaps	102	ICBC	1	https://statrys.com/blog/cnaps-code
+cn-cnaps	103	Agricultural Bank of China	1	https://statrys.com/blog/cnaps-code
+cn-cnaps	104	Bank of China	1	https://statrys.com/blog/cnaps-code
+cn-cnaps	105	China Construction Bank	1	https://statrys.com/blog/cnaps-code
+id-bank	014	Bank Central Asia	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	008	Bank Mandiri	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	002	Bank Rakyat Indonesia	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	009	Bank Negara Indonesia	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	200	Bank Tabungan Negara	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	022	CIMB Niaga	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	013	Permata Bank	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
+id-bank	011	Bank Danamon	1	https://finance.detik.com/moneter/d-7469777/daftar-lengkap-kode-bank-bri-dan-lainnya-untuk-transfer-antar-bank
