@@ -1,6 +1,8 @@
 // Draws accounts for scripts/validate_accounts.py and writes one row per account.
 //
-//   sample_finance <resource dir> <people per country and date> <accounts.tsv> <cards.tsv>
+//   sample_finance <resource dir> <people per country and date> <accounts.tsv> <cards.tsv> [<examples.tsv>]
+//
+// With examples, also prints each `scheme<TAB>number` line that is_valid refuses.
 //
 // Every country and territory, realistic at three dates and safe at the default
 // one. Each person holds a current and a savings account, so Brazil's account
@@ -116,9 +118,9 @@ void sample_cards(const dasmig::fng& gen, int count, dasmig::card_source source,
 
 int main(int argc, char** argv)
 {
-    if (argc != 5)
+    if (argc != 5 && argc != 6)
     {
-        std::cerr << "usage: sample_finance <resource dir> <count> <accounts.tsv> <cards.tsv>\n";
+        std::cerr << "usage: sample_finance <resource dir> <count> <accounts.tsv> <cards.tsv> [<examples.tsv>]\n";
         return 2;
     }
     dasmig::fng gen;
@@ -140,5 +142,15 @@ int main(int argc, char** argv)
     sample_cards(gen, holders, dasmig::card_source::network_range, realistic_dates, cards);
     sample_cards(gen, holders, dasmig::card_source::wrong_check, safe_dates, cards);
     sample_cards(gen, holders, dasmig::card_source::test_number, test_dates, cards);
+    if (argc == 6)
+    {
+        std::ifstream examples{argv[5]};
+        std::string line;
+        while (std::getline(examples, line))
+        {
+            const auto tab = line.find('\t');
+            if (!gen.is_valid(line.substr(0, tab), line.substr(tab + 1))) std::cout << "refused\t" << line << '\n';
+        }
+    }
     return out.good() && cards.good() ? 0 : 1;
 }

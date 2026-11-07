@@ -1,6 +1,5 @@
 Data sources of finance-generator. The code is under LICENSE; this file covers resources/.
-Per-table detail is in doc/data.md. The IBAN Registry entry below is provisional: SWIFT's
-licence clause has not yet been read in full, and the first release waits on that.
+Per-table detail is in doc/data.md.
 
 SWIFT BIC/LEI Mapping Table (BICs marked gleif in banks.tsv), through GLEIF, version of
 October 2026. The agreement requires this notice on any copy, in whole or in part:
@@ -14,8 +13,10 @@ October 2026. The agreement requires this notice on any copy, in whole or in par
 
 GLEIF LEI records (entity names): CC0 1.0. https://www.gleif.org/en/about/open-data
 
-SWIFT IBAN Registry, release 99 (iban_formats.tsv), read through schwifty's parsed copy.
-SWIFT's terms are to be confirmed before release.
+SWIFT IBAN Registry, release 99 (iban_formats.tsv), read through schwifty's parsed copy. Only
+the structures, lengths and positions are used, and the registry's text is not redistributed.
+SWIFT's own terms on the registry, in section 5.2 of its IBAN Registration Procedures, have not
+been read: its pages refuse scripts, and the owner chose to release without them on 2026-11-07.
 
 schwifty 2026.11.0 (bank lists, IBAN positions and forms outside the registry): MIT.
 Copyright (c) 2021 Martin Domke. https://github.com/mdomke/schwifty

@@ -1,5 +1,6 @@
 """Shared helpers for finance-generator's data build (stdlib only)."""
 import csv
+import io
 import re
 from pathlib import Path
 
@@ -13,6 +14,27 @@ RAW = ROOT / "raw_data"
 RESOURCES = ROOT / "resources"
 SIBLINGS = ROOT.parent
 TIERS = ("lite", "full")
+
+
+def read_registry():
+    """SWIFT's IBAN Registry text file by country, or None when it is not saved.
+
+    One column per country and one row per field. It is cp1252 with quoted line
+    breaks, and it holds contact details, which are neither kept nor printed here.
+    """
+    path = RAW / "iban_registry.txt"
+    if not path.exists():
+        return None
+    fields = {"BBAN structure": "bban", "IBAN length": "length", "SEPA country": "sepa", "IBAN electronic format example": "example",
+              "Country code includes other countries/territories": "includes",
+              "Bank identifier position within the BBAN": "bank", "Branch identifier position within the BBAN": "branch"}
+    text = path.read_bytes().decode("cp1252").replace("\r\n", "\n")
+    rows = {r[0].strip(): r[1:] for r in csv.reader(io.StringIO(text), delimiter="\t") if r}
+    registry = {}
+    for i, code in enumerate(rows["IBAN prefix country code (ISO 3166)"]):
+        if code.strip():
+            registry[code.strip()] = {name: rows[field][i].strip() for field, name in fields.items()}
+    return registry
 
 
 def read_tsv(path):

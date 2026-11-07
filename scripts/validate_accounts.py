@@ -8,6 +8,7 @@ here from the national rules, and the report counts how far each oracle reached.
 
 It also draws a fifth as many people with four cards each, from each source, and checks
 them against stdnum's Luhn and against the card tables as this script reads them.
+When raw_data/iban_registry.txt is saved, SWIFT's example IBANs are read back as well.
 
 Both libraries are for this script only; they are never shipped or vendored. stdnum is
 LGPL:
@@ -35,6 +36,8 @@ import warnings
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from pathlib import Path
+
+from fingen_data import read_registry
 
 ROOT = Path(__file__).resolve().parent.parent
 csv.field_size_limit(10_000_000)
@@ -474,6 +477,32 @@ def run_cards(tier, sample):
     return False
 
 
+# SWIFT's examples whose bank is not on our complete list: a placeholder or a code not on the
+# register. Each passes every structure and check-digit rule once its bank is added as a layer.
+REGISTRY_REFUSED = {"lite": {"LV", "SI", "SK"}, "full": {"BE", "LV", "RO", "SI", "SK"}}
+
+
+def write_registry_examples(path):
+    """SWIFT's example IBANs, for the sampler to read back; False when the text is not saved."""
+    registry = read_registry()
+    if registry is None:
+        return False
+    with open(path, "w", encoding="utf-8", newline="\n") as out:
+        for code, entry in sorted(registry.items()):
+            out.write(f"iban-{code.lower()}\t{entry['example']}\n")
+    return True
+
+
+def check_registry_examples(tier, output, examples):
+    refused = {line.split("\t")[1][5:].upper() for line in output.splitlines() if line.startswith("refused\t")}
+    total = sum(1 for _ in open(examples, encoding="utf-8"))
+    print(f"  SWIFT's examples: {total}, refused {sorted(refused)}")
+    if refused != REGISTRY_REFUSED[tier]:
+        print(f"  expected {sorted(REGISTRY_REFUSED[tier])}, so a check rule may be wrong")
+        return False
+    return True
+
+
 def build(cxx, out):
     command = [cxx, "-std=c++23", "-O2", "-I", str(ROOT), "-o", str(out), str(ROOT / "scripts/sample_finance.cpp")]
     subprocess.run(command, check=True)
@@ -484,7 +513,12 @@ def run_tier(tier, count, cxx, build_dir):
     build(cxx, binary)
     sample = build_dir / f"accounts_{tier}.tsv"
     card_sample = build_dir / f"cards_{tier}.tsv"
-    subprocess.run([str(binary), str(ROOT / "resources" / tier), str(count), str(sample), str(card_sample)], check=True)
+    examples = build_dir / "registry_examples.tsv"
+    command = [str(binary), str(ROOT / "resources" / tier), str(count), str(sample), str(card_sample)]
+    has_examples = write_registry_examples(examples)
+    if has_examples:
+        command.append(str(examples))
+    result = subprocess.run(command, check=True, capture_output=True, text=True)
 
     checks = Checks(tier)
     tally = Counter()
@@ -516,6 +550,8 @@ def run_tier(tier, count, cxx, build_dir):
     for name, schemes in sorted(checks.reach.items()):
         print(f"    {name}: {len(schemes)}, {sum(schemes.values()):,}")
     cards_ok = run_cards(tier, card_sample)
+    if has_examples:
+        cards_ok = check_registry_examples(tier, result.stdout, examples) and cards_ok
     if not failures:
         print("  every account as declared")
         return cards_ok

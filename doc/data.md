@@ -43,7 +43,7 @@ Each row of `schemes.tsv` and `banks.tsv` names its own. [`LICENSE_DATA.txt`](..
 | Data | Source | How reliable |
 | --- | --- | --- |
 | Population, currency, minor unit | country-generator | One current value per country, whatever the reference date. |
-| IBAN structure | SWIFT IBAN Registry release 99, through schwifty 2026.11.0's parsed copy (MIT) | The structures are the registry's. The national-check positions of Russia and Iceland, and the territories' checks, were added here. |
+| IBAN structure | SWIFT IBAN Registry release 99, through schwifty 2026.11.0's parsed copy (MIT) | The structures are the registry's, and `prepare_iban.py` cross-checks them against SWIFT's own text when it is saved: on 2026-11-07, all 89 countries agreed on structure, length and SEPA, and on positions apart from two (see below), and the 16 territories it lists under a parent are the ones marked registered. The national-check positions of Russia and Iceland, and the territories' checks, were added here. |
 | Bank lists | schwifty's lists; razorpay/ifsc (India); zengin-code (Japan); Banco Central do Brasil; Bank of Russia; Payments NZ's branch register; curated pages; GLEIF's BIC/LEI table where nothing better exists | Lists from an authority are complete. Others have what the source has. |
 | Weights | Branch counts where a file has branches; FDIC deposits for the US; otherwise flat | Weights are flat in many lists, so a small bank is drawn as often as a large one. |
 | German check methods | Deutsche Bundesbank, *Prüfzifferberechnungsmethoden und Prüfzifferverfahren* (June 2018) | The text of the authority. Twenty methods are implemented, covering 95.5% of codes. |
@@ -193,6 +193,11 @@ Three disagreements were read and are not our errors:
 - stdnum's Belgian table lacks codes on the National Bank's register, such as 606.
 - stdnum has no entries for the territories and the forms outside the registry.
 
+**SWIFT's own text and examples**, read on 2026-11-07. The text has no release number, so it does not itself confirm the release.
+
+- Two positions differ on purpose, following schwifty: Albania's 5-digit branch holds a national check digit, and Slovenia's 5-digit bank is a 2-digit bank and a 3-digit branch. The check rules need them apart.
+- All 89 example IBANs pass every structure and check-digit rule. `is_valid` still refuses 3 on `lite` (LV, SI, SK) and 5 on `full` (also BE, RO), because their banks are not on our complete lists: Latvia's and Romania's are placeholders, `BANK` and `AAAA`. Each passes once its bank is added as a layer. `validate_accounts.py` repeats this.
+
 ## Known Limitations
 
 - **China** (17.6% of the world's people) is on secondary sources: four flat banks from one guide, and no CNAPS check rule.
@@ -206,4 +211,4 @@ Three disagreements were read and are not our errors:
 - **Card ranges are secondary,** and BC Card is left out, since no range was found for it. Network shares per country are judgement, and so is the Mastercard weighting.
 - **`wrong_check` rests on secondary evidence.** Only UnionPay and Hipercard were found to be in doubt, and no network's own text was read.
 - **A prepaid card has no survey behind it,** and `surveyed` always gives one.
-- **Licences.** SWIFT's clause on the registry is still to be read, and zengin-code and the Payments NZ register state no licence; only facts are used. See `LICENSE_DATA.txt`.
+- **Licences.** SWIFT's own terms on the registry have not been read, and zengin-code and the Payments NZ register state no licence; only facts are used. See `LICENSE_DATA.txt`.

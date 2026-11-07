@@ -6,8 +6,14 @@ corrects positions. SWIFT refuses scripts, so its own text is saved by hand and 
 not read yet; schwifty's copy is the only source until a person saves it (design 14).
 """
 import json
+import re
 
-from fingen_data import RAW, spec_classes, spec_pattern, survey, write_all_tiers
+from fingen_data import RAW, read_registry, spec_classes, spec_pattern, survey, write_all_tiers
+
+# Where the table differs from SWIFT's text on purpose: schwifty separates a national check
+# digit or a branch that the text leaves inside a field, and the check rules need them apart.
+REGISTRY_DIFFERS = {("AL", "branch"): "the text's 5-digit branch holds a national check digit",
+                    ("SI", "bank"): "the text's 5-digit bank is a 2-digit bank and a 3-digit branch"}
 
 COLUMNS = ["country_code", "bban_pattern", "length", "bank_from", "bank_to", "branch_from", "branch_to",
            "account_from", "account_to", "check_from", "check_to", "check_builder", "sepa", "registered"]
@@ -62,6 +68,51 @@ def load_formats():
     return merged, generated
 
 
+def expand(pattern):
+    """A bban_pattern as one symbol per character, so #{4}#{6} equals #{10}."""
+    return "".join(symbol * int(size) for symbol, size in re.findall(r"(.)\{(\d+)\}", pattern))
+
+
+def position(text):
+    """The text's 1-based inclusive `4-8` as the table's 0-based half-open pair; None when empty."""
+    match = re.fullmatch(r"(\d+)\s*-\s*(\d+)", text)
+    return (int(match[1]) - 1, int(match[2])) if match else None
+
+
+def cross_check(rows):
+    """Compare the table with SWIFT's own text, when it is saved. Any difference not listed fails."""
+    registry = read_registry()
+    if registry is None:
+        print("note: raw_data/iban_registry.txt is not saved, so schwifty's copy is uncross-checked")
+        return
+    ours = {r["country_code"]: r for r in rows}
+    # A territory is registered under its parent's entry: France's lists GF, GB's lists JE.
+    listed = set(registry) | {code for entry in registry.values() for code in re.findall(r"\b[A-Z]{2}\b", entry["includes"])}
+    problems = [f"{cc}: in SWIFT's text and not in the table" for cc in listed if cc not in ours]
+    problems += [f"{cc}: marked registered and not in SWIFT's text" for cc, r in ours.items() if r["registered"] and cc not in listed]
+    problems += [f"{cc}: in SWIFT's text and not marked registered" for cc in listed if cc in ours and not ours[cc]["registered"]]
+    for cc, entry in registry.items():
+        row = ours.get(cc)
+        if row is None:
+            continue
+        spec = spec_pattern(entry["bban"])
+        if expand(spec) != expand(row["bban_pattern"]):
+            problems.append(f"{cc}: structure {entry['bban']} in the text, {row['bban_pattern']} here")
+        if int(entry["length"]) != int(row["length"]):
+            problems.append(f"{cc}: length {entry['length']} in the text, {row['length']} here")
+        if entry["sepa"].lower().startswith("yes") != bool(row["sepa"]):
+            problems.append(f"{cc}: SEPA {entry['sepa']} in the text, {row['sepa'] or 'no'} here")
+        for field in ("bank", "branch"):
+            theirs = position(entry[field])
+            mine = (int(row[f"{field}_from"]), int(row[f"{field}_to"])) if row[f"{field}_from"] != "" else None
+            if theirs and theirs != mine and (cc, field) not in REGISTRY_DIFFERS:
+                problems.append(f"{cc}: {field} at {theirs} in the text, {mine} here")
+    if problems:
+        raise SystemExit("SWIFT's text disagrees:\n" + "\n".join(problems))
+    print(f"cross-checked against SWIFT's text: {len(registry)} countries and {len(listed) - len(registry)} territories agree, "
+          f"apart from {sorted(REGISTRY_DIFFERS)}")
+
+
 def main():
     formats, generated = load_formats()
     by_scheme = {r["scheme"]: r for r in survey()}
@@ -105,8 +156,7 @@ def main():
                     COLUMNS, rows)
     registered = sum(1 for r in rows if r["registered"])
     print(f"iban_formats.tsv: {len(rows)} formats, {registered} registered")
-    if not (RAW / "iban_registry.txt").exists():
-        print("note: raw_data/iban_registry.txt is not saved, so schwifty's copy is uncross-checked")
+    cross_check(rows)
 
 
 if __name__ == "__main__":
