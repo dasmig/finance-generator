@@ -6,6 +6,9 @@ accounts) per country and territory at three dates, plus safe ones, and checks e
 account with schwifty and python-stdnum. Rules neither has are checked by code written
 here from the national rules, and the report counts how far each oracle reached.
 
+It also draws a fifth as many people with four cards each, from each source, and checks
+them against stdnum's Luhn and against the card tables as this script reads them.
+
 Both libraries are for this script only; they are never shipped or vendored. stdnum is
 LGPL:
 
@@ -30,7 +33,7 @@ import subprocess
 import sys
 import warnings
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -369,6 +372,108 @@ def check_common(row):
     return problems
 
 
+class CardChecks:
+    """The cards' rules, read from the tables by this script and not by the header."""
+
+    def __init__(self, tier):
+        folder = ROOT / "resources" / tier
+        self.ranges = defaultdict(list)
+        for row in read_tsv(folder / "networks.tsv"):
+            self.ranges[row["network"]].append(row)
+        self.doubtful = {row["network"] for rows in self.ranges.values() for row in rows if row["luhn"] == "unsure"}
+        self.tests = {(row["source"], row["number"]): row for row in read_tsv(folder / "test_cards.tsv")}
+        self.bands = defaultdict(set)
+        for row in read_tsv(folder / "card_networks.tsv"):
+            self.bands[row["country_code"]].add(row["network"])
+
+    def holders(self, number):
+        def fits(row):
+            size = len(row["range_from"])
+            return row["range_from"] <= number[:size] <= row["range_to"] and str(len(number)) in row["lengths"].split(",")
+        return {name for name, rows in self.ranges.items() if any(fits(r) for r in rows)}
+
+    def country_networks(self, country):
+        return self.bands.get(country) or self.bands["*"]
+
+    def check(self, row, luhn):
+        problems = []
+        number, source, network = row["number"], row["source"], row["network"]
+        holders = self.holders(number)
+        if not number.isdigit():
+            problems.append("not digits")
+        if network not in holders:
+            problems.append(f"outside {network}'s ranges")
+        if row["formatted"].replace(" ", "") != number:
+            problems.append("formatted is another number")
+        if luhn.is_valid(number) != (source != "wrong_check"):
+            problems.append(f"stdnum's Luhn disagrees with {source}")
+        if (row["own_valid"] == "1") != (source != "wrong_check"):
+            problems.append(f"card_valid disagrees with {source}")
+        if source == "wrong_check" and holders & self.doubtful:
+            problems.append(f"wrong_check in {sorted(holders & self.doubtful)}, whose cards may fail Luhn")
+        if (row["reserved"] == "1") != (source != "network_range"):
+            problems.append("reserved")
+        size = 4 if network == "amex" else 3
+        if source == "network_range":
+            if row["security_code"]:
+                problems.append("a security code on a network_range number")
+        elif len(row["security_code"]) != size:
+            problems.append("security code length")
+
+        born, issued, reference = (date.fromisoformat(row[k]) for k in ("birth", "issued", "reference"))
+        expires = date.fromisoformat(row["expires"] + "-01")
+        last = (expires.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        if not issued <= reference <= last:
+            problems.append(f"dates {issued} {row['expires']} do not span {reference}")
+        if issued < add_years(born, 18 if row["kind"] == "credit" else 16):
+            problems.append(f"{row['kind']} issued too young")
+
+        allowed = {int(y) for r in self.ranges[network] for y in r["validity_years"].split(",")}
+        published = self.tests.get((row["test_source"], number))
+        if source == "test_number":
+            if published is None:
+                return problems + ["not a published number"]
+            if published["network"] != network:
+                problems.append("not as published")
+            if published["kind"] not in ("any", row["kind"]):
+                problems.append("another kind than published")
+            if published["country_code"] not in ("", row["country"]):
+                problems.append("another country's number")
+            if published["security_code"] and published["security_code"] != row["security_code"]:
+                problems.append("another code than published")
+        if source != "test_number" or not published["expires"]:
+            if expires.year - issued.year not in allowed or expires.month != issued.month:
+                problems.append(f"validity {issued} to {row['expires']}")
+        elif published["expires"] != row["expires"]:
+            problems.append("another expiry than published")
+
+        if source == "network_range" and len(holders & self.country_networks(row["country"])) > 1:
+            problems.append(f"also in {sorted(holders - {network})}, of the same country")
+        return problems
+
+
+def run_cards(tier, sample):
+    from stdnum import luhn
+    checks = CardChecks(tier)
+    tally = Counter()
+    networks = Counter()
+    failures = defaultdict(list)
+    for row in read_tsv(sample):
+        tally[row["source"]] += 1
+        networks[row["network"]] += 1
+        for problem in checks.check(row, luhn):
+            failures[re.sub(r"\d{3,}", "#", problem)].append((row["country"], row["network"], problem))
+    print(f"  cards: {dict(sorted(tally.items()))}")
+    print(f"  by network: {dict(networks.most_common())}")
+    if not failures:
+        print("  every card as declared")
+        return True
+    print(f"  {sum(len(v) for v in failures.values()):,} card problems of {len(failures)} kinds:")
+    for _, found in sorted(failures.items(), key=lambda kv: -len(kv[1]))[:40]:
+        print(f"    {len(found):,} x {found[0]}")
+    return False
+
+
 def build(cxx, out):
     command = [cxx, "-std=c++23", "-O2", "-I", str(ROOT), "-o", str(out), str(ROOT / "scripts/sample_finance.cpp")]
     subprocess.run(command, check=True)
@@ -378,7 +483,8 @@ def run_tier(tier, count, cxx, build_dir):
     binary = build_dir / ("sample_finance.exe" if sys.platform == "win32" else "sample_finance")
     build(cxx, binary)
     sample = build_dir / f"accounts_{tier}.tsv"
-    subprocess.run([str(binary), str(ROOT / "resources" / tier), str(count), str(sample)], check=True)
+    card_sample = build_dir / f"cards_{tier}.tsv"
+    subprocess.run([str(binary), str(ROOT / "resources" / tier), str(count), str(sample), str(card_sample)], check=True)
 
     checks = Checks(tier)
     tally = Counter()
@@ -409,9 +515,10 @@ def run_tier(tier, count, cxx, build_dir):
     print("  reach (schemes, accounts):")
     for name, schemes in sorted(checks.reach.items()):
         print(f"    {name}: {len(schemes)}, {sum(schemes.values()):,}")
+    cards_ok = run_cards(tier, card_sample)
     if not failures:
         print("  every account as declared")
-        return True
+        return cards_ok
     total = sum(len(v) for v in failures.values())
     print(f"  {total:,} problems of {len(failures)} kinds:")
     for (scheme, _kind), found in sorted(failures.items(), key=lambda kv: -len(kv[1]))[:60]:

@@ -43,6 +43,25 @@ int main()
                   << (gen.is_valid(account.scheme, account.formatted) ? "yes" : "no") << '\n';
     }
 
+    std::cout << "\nA card from a sandbox's published numbers, which safe uses:\n";
+    dasmig::finance_request carded;
+    carded.country = "DE";
+    carded.safe = true;
+    carded.given_names = "Maria";
+    carded.surname = "Garcia";
+    carded.cards = {dasmig::card_kind::debit};
+    const auto card = gen.get_finance(carded, std::uint64_t{42}).cards.front();
+    std::cout << "  " << card.network << ' ' << card.formatted << "  " << card.holder << "  from " << card.test_source
+              << ", valid: " << (gen.card_valid(card.number) ? "yes" : "no") << '\n';
+
+    std::cout << "\nA number with a wrong check digit, which no card has:\n";
+    dasmig::finance_request wrong;
+    wrong.country = "JP";
+    wrong.cards = {dasmig::card_kind::credit};
+    wrong.card_numbers = dasmig::card_source::wrong_check;
+    const auto refused = gen.get_finance(wrong, std::uint64_t{42}).cards.front();
+    std::cout << "  " << refused.network << ' ' << refused.formatted << ", valid: " << (gen.card_valid(refused.number) ? "yes" : "no") << '\n';
+
     std::cout << "\nWith a layer that adds a bank to Andorra:\n";
     gen.extend_from_string(dasmig::finance_table::banks,
                            "scheme\tbank_code\tname\tweight\niban-ad\t9999\tBanc de Prova\t100000\n", "example.tsv");

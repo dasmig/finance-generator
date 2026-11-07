@@ -20,6 +20,13 @@ int main(int argc, char** argv)
         return gen.get_finance({}, seed).to_json();
     });
 
+    dasmig::finance_request with_card;
+    with_card.cards = {dasmig::card_kind::debit};
+    run.calls("get_finance with a card", [&](std::uint64_t seed) { return gen.get_finance(with_card, seed); });
+    dasmig::finance_request with_test_card = with_card;
+    with_test_card.card_numbers = dasmig::card_source::test_number;
+    run.calls("get_finance with a test card", [&](std::uint64_t seed) { return gen.get_finance(with_test_card, seed); });
+
     run.batches("get_finance_batch", [&](std::size_t count, std::size_t threads, std::uint64_t seed) {
         return gen.get_finance_batch({}, {.count = count, .threads = threads}, seed);
     });

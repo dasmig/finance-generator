@@ -20,8 +20,6 @@ Accounts drawn without `safe` are structurally valid and may match a real person
 
 The tables total 0.28 MB in `lite` and 2.13 MB in `full`. Only `banks.tsv` differs in its rows: `lite` keeps at most the 60 heaviest banks of a scheme, and `full` has every code of the long lists, such as Germany's and Britain's. Cutting a list stops it being complete, so `list_complete` and `safe_method` in `schemes.tsv` differ by tier (see [Safe](#safe)).
 
-The four card tables are loaded and checked; cards are generated from them from Milestone 5 of the design.
-
 ## Columns
 
 Every table is TSV, with a first-line `#` comment naming its source. Layers use the same columns.
@@ -33,7 +31,7 @@ Every table is TSV, with a first-line `#` comment naming its source. Layers use 
 | `iban_formats.tsv` | `country_code` | `bban_pattern`, `length`; optional `bank_from`, `bank_to`, `branch_from`, `branch_to`, `account_from`, `account_to`, `check_from`, `check_to`, `check_builder`, `sepa`, `registered` |
 | `banks.tsv` | `scheme`, `bank_code` | `name`, `weight`; optional `bic`, `branch_codes`, `method`, `everyday_code`, `source` |
 | `test_accounts.tsv` | `source`, `scheme`, `number` | optional `bank_code`, `branch_code`, `account_number` |
-| `networks.tsv` | `network`, `range_from` | `range_to`, `length`, `lengths`, `weight`; optional `validity_years`, `min_age`, `format`, `source` |
+| `networks.tsv` | `network`, `range_from` | `range_to`, `length`, `lengths`, `weight`; optional `validity_years`, `min_age`, `format`, `luhn`, `source` |
 | `card_networks.tsv` | `country_code`, `kind`, `network` | `band`, `evidence` |
 | `test_cards.tsv` | `source`, `number` | `network`, `kind`; optional `country_code`, `expires`, `security_code` |
 | `ownership.tsv` | `country_code`, `group` | `account`, `debit`, `credit`; optional `year`, `filled` |
@@ -53,6 +51,10 @@ Each row of `schemes.tsv` and `banks.tsv` names its own. [`LICENSE_DATA.txt`](..
 | Brazil's IBAN | Banco Central do Brasil's layout | The account type letter `P` for savings comes only from a third-party guide; the bank's registry example shows `C1`. |
 | Russia's account | Bank of Russia's BIK directory; the key rule; the prefix `40817810` (a person's account, in roubles) from secondary sources | Structure and key are firm; the prefix is secondary. |
 | Test numbers | Stripe's published values, read 2026-11-06 | Several are well-known examples at real banks' codes. |
+| Card ranges | Wikipedia's *Payment card number* table; ActiveMerchant (Elo, Hipercard); BINDB (Verve, Troy) | All secondary: the networks' own documents were not found. The sandboxes' numbers do fall in these ranges. |
+| Test cards | The sandbox pages of Stripe, Adyen and Braintree, read 2026-11-06 | The publishers' own, and they will age. The earliest published expiry is 2029-12. |
+| Networks per country | Curated bands | **Judgement, not data.** No open source for network share by country was found, and the Nilson Report is paid. |
+| Who holds what | World Bank, Global Findex Database 2025 | Each economy's latest **positive** value, with its year in the table (see below). |
 
 ## Generation Model
 
@@ -135,6 +137,28 @@ Limits of each method:
 
 Every safe result has `reserved` set and `bank_name` empty. A BIC has `0` as its 8th character, a test BIC by SWIFT's convention, which comes from secondary sources and may not hold outside FIN. An `unassigned_code` account has no BIC.
 
+## Cards
+
+A card's stream is `split("card").split(position)`, with `kind`, `network`, `number`, `dates` and `code` inside it, so another card leaves the first ones unchanged. `ownership` is a stream of its own, used only when `holding = surveyed`.
+
+**There are no issuer ranges.** The number encodes the network and nothing else, although open copies of issuer tables exist. `issuer` copies the first account's bank name.
+
+**A default card may be real.** These are estimates: the card count is Nilson's end-2023 figure as a secondary source gives it, 17.45 billion cards with Visa at 25%, so about 4.4 billion, and it assumes every Visa card has 16 digits. Visa's whole range has 10^14 numbers with a right Luhn digit, which is about 1 real card in 22,000 draws, or around 45 in a million. A number from one bank's range would be about 20 times likelier, which is why the library has no such ranges and never pairs a `network_range` number with a security code.
+
+**`wrong_check` and Luhn.** A number failing Luhn is safe only if every card of the network passes it, and no network's own text was found to say so. The sandboxes' numbers all pass, and general descriptions of card numbers say the last digit is a Luhn digit. Two networks are marked `luhn` = `unsure` and get no `wrong_check`: Hipercard, which ActiveMerchant exempts from the checksum, and UnionPay, which Chromium and Interchange have both exempted while other software enforces it. Other networks' `wrong_check` numbers are drawn outside those two networks' ranges, because RuPay's 60 and 81 hold theirs. `card_valid` still requires Luhn for those two, so it can refuse a real card of theirs.
+
+**Which network.** `card_networks.tsv` gives bands per country: main 8, common 2, rare 0.5. The default is Visa main, Mastercard main, American Express rare. A country's own rows replace the default, and rows for one kind replace its rows for every kind. With `test_number`, the draw is among networks with a number for that country, and then the country-free list. A network's ranges are drawn by `weight`: Mastercard's 51-55 is weighted 4 to 1 over 2221-2720, a judgement that the older range still holds most cards. When two networks of one country overlap, the number is redrawn to lie outside the other, up to 64 times.
+
+**Dates.** Validity is 3, 4 or 5 years, a judgement since networks publish no rule. The card is the one running at the reference date, so `issued` is flat over the days whose card still runs then, and not before the holder's minimum age. A test number keeps its published expiry, with `issued` flat over the last 5 years, so its validity can reach many years. Braintree states no expiry, so its numbers use the drawn rule.
+
+**Who holds what.** `ownership.tsv` holds Findex's shares for accounts, debit cards and credit cards, for all adults, 15 to 24, and 25 and over.
+
+- **A credit-card share of 0 for 2024 is not data.** Findex reports 0 for the US, Germany, Japan, the UK, France, Australia, Canada, Korea and 35 others, whose 2021 values run from 40% to 70%. Its microdata shows the question went unasked (Greece has 0 valid and 1,004 missing answers). So each economy takes its latest positive value, with the year in the table. Some are old (Qatar and Syria, 2011). 40 countries with none take the subregion's population-weighted mean, marked `filled`.
+- **A drawn kind** is debit or credit by the country's ratio of the two. Prepaid is drawn only when asked for.
+- **`surveyed`** draws one chance for accounts and debit cards together, so a debit holder has an account wherever the shares allow, and a second for credit cards. All accounts or debit cards in one request come or go together. Findex has no share for prepaid, so a prepaid card is always held. A person of 15 to 24 uses that group's share, and everyone older uses 25 and over.
+
+**Holder.** Upper-cased and folded to ASCII from Latin-1 and Latin Extended-A, keeping hyphens and apostrophes and dropping full stops. 26 characters at most, ISO/IEC 7813's name field by secondary sources since the standard is paid. Later given names shrink to initials first, then the first, then the end is cut. Any other character leaves `holder` empty rather than guessing.
+
 ## Rebuilding the Data
 
 ```
@@ -179,4 +203,7 @@ Three disagreements were read and are not our errors:
 - **Currency is one value.** A person in Croatia in 2005 gets the euro, and Bulgaria's lev, Cuba's convertible peso and Zimbabwe's dollar are country-generator's current values, some of them since replaced.
 - **Bank lists age.** Banks merge, and a list has no dates of its own.
 - **New Zealand's banks 09, 26, 28, 29, 33 and 35** have check rules from stdnum's table where Inland Revenue's current table lists no such bank; example 3 of the text does use bank 26 with algorithm G.
+- **Card ranges are secondary,** and BC Card is left out, since no range was found for it. Network shares per country are judgement, and so is the Mastercard weighting.
+- **`wrong_check` rests on secondary evidence.** Only UnionPay and Hipercard were found to be in doubt, and no network's own text was read.
+- **A prepaid card has no survey behind it,** and `surveyed` always gives one.
 - **Licences.** SWIFT's clause on the registry is still to be read, and zengin-code and the Payments NZ register state no licence; only facts are used. See `LICENSE_DATA.txt`.

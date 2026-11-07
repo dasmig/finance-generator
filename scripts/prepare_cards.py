@@ -2,7 +2,7 @@
 """Write networks.tsv, card_networks.tsv, test_cards.tsv and test_accounts.tsv from curated/."""
 from fingen_data import CURATED, read_tsv, write_all_tiers
 
-NETWORKS = ["network", "range_from", "range_to", "length", "lengths", "weight", "validity_years", "min_age", "format",
+NETWORKS = ["network", "range_from", "range_to", "length", "lengths", "weight", "validity_years", "min_age", "luhn", "format",
             "source"]
 CARD_NETWORKS = ["country_code", "kind", "network", "band", "evidence"]
 TEST_CARDS = ["source", "number", "network", "kind", "country_code", "expires", "security_code"]

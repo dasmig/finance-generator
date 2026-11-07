@@ -11,6 +11,7 @@ This guide covers every feature of the finance-generator library. For a quick ov
 <li><a href="#loading-resources">Loading Resources</a></li>
 <li><a href="#generating">Generating</a></li>
 <li><a href="#safe-accounts">Safe Accounts</a></li>
+<li><a href="#cards">Cards</a></li>
 <li><a href="#checking-a-number">Checking a Number</a></li>
 <li><a href="#seeding-and-deterministic-generation">Seeding and Deterministic Generation</a></li>
 <li><a href="#extending-data">Extending Data</a></li>
@@ -95,7 +96,7 @@ Each account has:
 
 ## Safe Accounts
 
-Accounts drawn without `safe` are structurally valid and may match a real person's account. The library cannot tell. They are test data: never use them for payments, direct debits, to open accounts or to pass a check. The library looks nothing up.
+Accounts drawn without `safe`, and cards from `network_range` (the default), are structurally valid and may match a real person's account or card. The library cannot tell. A million default cards would contain real numbers: about 45 by our estimate ([why](data.md#cards)). They are test data: never use them for payments, direct debits, to open accounts or to pass a check, and never send them to a live payment system. Trying numbers on a live system is card testing, which is fraud, whatever produced them. Test numbers work only in the sandbox that published them. The library looks nothing up, and it produces no card images, stripe data, PINs or EMV data.
 
 `safe = true` applies each scheme's method, and **what it promises varies**:
 
@@ -109,10 +110,59 @@ Accounts drawn without `safe` are structurally valid and may match a real person
 
 `none` covers 88 countries, including China, India, Indonesia and Japan, whose forms have no check digit and whose lists are incomplete. Check [`doc/data.md`](data.md#safe) for your country before relying on `safe`.
 
+## Cards
+
+Cards are asked for by kind. A card has no issuer range: the number encodes the network only, and `issuer` is just the first account's bank name.
+
+```cpp
+dasmig::finance_request q;
+q.country = "DE";
+q.cards = {dasmig::card_kind::debit, std::nullopt}; // one debit, and one whose kind is drawn
+q.given_names = "Maria";                            // for the holder; unset: holder is empty
+q.surname = "Garcia";
+q.card_numbers = dasmig::card_source::test_number;  // unset: network_range, or test_number under safe
+q.network = "visa";                                 // unset: drawn for the country
+q.holding = dasmig::ownership::surveyed;            // Findex decides who holds what
+
+const auto v = gen.get_finance(q, 42);
+if (!v.cards.empty()) v.cards.front().formatted;    // "4000 0027 6000 0016"
+```
+
+| `card_source` | Number | `card_valid` | Who holds it |
+| --- | --- | --- | --- |
+| `network_range` (default) | In the network's range with a right Luhn digit | true | **Possibly a real person**, so it never has a security code |
+| `test_number` (default under `safe`) | Published by Stripe, Adyen or Braintree, with its expiry and code where the sandbox states them | true | Nobody: it works only in the sandbox named by `test_source` |
+| `wrong_check` | In the network's range with a wrong Luhn digit | false | Nobody, as far as sources show. Not offered for UnionPay or Hipercard |
+
+`safe` uses `test_number` unless you ask for `wrong_check`, and an explicit `network_range` with `safe` is an error.
+
+Each card has:
+
+| Field | Meaning |
+| --- | --- |
+| `network` | `"visa"`, `"mastercard"`, `"amex"`, `"unionpay"`, `"rupay"`... |
+| `kind`, `source` | As asked for or drawn |
+| `number`, `formatted` | Digits only, and in the network's groups: American Express is 4-6-5 |
+| `holder` | Upper-case ASCII, at most 26 characters, given names shrinking to initials first. Empty without names, or when a name has no Latin form |
+| `issuer` | The first account's bank name; a label only |
+| `security_code` | Always empty for `network_range`. The published code for a test number that needs one, otherwise 3 digits drawn, or 4 for American Express |
+| `issued`, `expires` | The card running at the reference date; `expires` is a month, and the card runs to its last day |
+| `test_source` | `"stripe"`, `"adyen"` or `"braintree"` for a test number; otherwise empty |
+| `reserved` | True for `test_number` and `wrong_check` |
+
+**Who holds what.** With `holding = asked`, the default, everything asked for is given, since a tester asking for a card wants a card. With `surveyed`, accounts and cards become chances by the Global Findex shares for the person's country and age. An instrument not held is left out, which is not an error.
+
+**Age.** A debit or prepaid card is held from 16, and a credit card from 18. Someone younger has none, and a drawn kind gives way to debit.
+
+**Test numbers are few.** A person's cards take different numbers while another fits, and a `unique` batch keyed on the number runs out quickly and throws. A number whose published expiry is before the reference date is not drawn, and it is an error when none is left. Published dates mean a test card's validity can be far longer than a real card's.
+
 ## Checking a Number
 
 ```cpp
 gen.is_valid("iban-de", "DE89 3704 0044 0532 0130 00"); // the display or electronic form
+gen.card_valid("4242 4242 4242 4242");                  // length and Luhn, for a network whose range holds it
+gen.card_networks("6500000000000002");                  // {"discover", "rupay", ...}: ranges overlap
+gen.networks("IN");                                     // the country's networks
 ```
 
 `is_valid` checks the structure, every check digit, and a known bank when the scheme's list is complete. It looks nothing up, and true does not mean an account exists. An unknown scheme throws.
@@ -203,5 +253,5 @@ gen.for_each_finance(request, {.count = 1'000'000, .threads = 0}, 42, lines);
 |-----------|------|
 | `std::runtime_error` | Any generation call before data is loaded |
 | `std::runtime_error` | A unique batch runs out of attempts; a scheme's number cannot be drawn in 64 tries |
-| `std::invalid_argument` | An unknown country or scheme; a birth date after the reference date or before 1900; an invalid date; a reference date outside 1900 to 2090; a layer that leaves the tables not fitting together (the data is unchanged) |
+| `std::invalid_argument` | An unknown country, scheme or network; `safe` with an explicit `network_range`; `wrong_check` on UnionPay or Hipercard; a test number when no sandbox has one for the network and kind, or none runs to the reference date; a birth date after the reference date or before 1900; an invalid date; a reference date outside 1900 to 2090; a layer that leaves the tables not fitting together (the data is unchanged) |
 | `dasmig::core::tsv_error` | A malformed table or layer (message gives file, line and column); the data is unchanged |

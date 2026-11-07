@@ -11,9 +11,9 @@
 
 **[API Reference](https://dasmig.github.io/finance-generator/)** · **[Usage Guide](doc/usage.md)** · **[Data and Method](doc/data.md)** · **[Releases](https://github.com/dasmig/finance-generator/releases)**
 
-A person's bank accounts in their country's own form, every part consistent with the person, the country and the date: IBANs and the national forms, with their check digits, the country's banks and its currency.
+A person's bank accounts and payment cards, every part consistent with the person, the country and the date: IBANs and the national forms with their check digits, the country's banks and currency, and cards with the right network, length, Luhn digit and a plausible expiry.
 
-> Accounts drawn without `safe` are structurally valid and may match a real person's account. The library cannot tell. They are test data: never use them for payments, direct debits, to open accounts or to pass a check. The library looks nothing up. What `safe` promises varies by scheme, and for 88 countries it promises nothing ([data and method](doc/data.md#safe)).
+> Accounts drawn without `safe`, and cards from `network_range` (the default), are structurally valid and may match a real person's account or card. The library cannot tell. A million default cards would contain real numbers: about 45 by our estimate ([why](doc/data.md#cards)). They are test data: never use them for payments, direct debits, to open accounts or to pass a check, and never send them to a live payment system. Trying numbers on a live system is card testing, which is fraud, whatever produced them. Test numbers work only in the sandbox that published them. The library looks nothing up, and it produces no card images, stripe data, PINs or EMV data. What `safe` promises for an account varies by scheme, and for 88 countries it promises nothing ([data and method](doc/data.md#safe)).
 
 ## Features
 

@@ -46,6 +46,13 @@ https://www.worldbank.org/en/publication/globalfindex
 ActiveMerchant (Elo and Hipercard ranges in networks.tsv): MIT. Copyright (c) 2005-2010 Tobias
 Luetke. https://github.com/activemerchant/active_merchant
 
+Wikipedia, Payment card number (most ranges in networks.tsv): the page's text is CC BY-SA 4.0.
+Only ranges and lengths, which are facts, are used.
+https://en.wikipedia.org/wiki/Payment_card_number
+
+BINDB (Verve and Troy ranges in networks.tsv): only ranges, which are facts, are used. Each
+row's source column names the page.
+
 country-generator (population, currency, minor unit): see that library's LICENSE_DATA.txt.
 
 Test numbers are the published sandbox values of Stripe, Adyen and Braintree, each row naming

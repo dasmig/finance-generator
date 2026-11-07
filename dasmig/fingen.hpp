@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <ostream>
 #include <span>
@@ -55,6 +56,29 @@ enum class account_kind : std::uint8_t
     savings  ///< A savings account.
 };
 
+/// @brief The kinds of payment card a request can ask for.
+enum class card_kind : std::uint8_t
+{
+    debit,  ///< A debit card.
+    credit, ///< A credit card.
+    prepaid ///< A prepaid card.
+};
+
+/// @brief Where a card's number comes from.
+enum class card_source : std::uint8_t
+{
+    network_range, ///< In the network's range with a right Luhn digit. **May match a real card.** The default.
+    test_number,   ///< A number a payment sandbox publishes for testing. The default under `safe`.
+    wrong_check    ///< In the network's range with a wrong Luhn digit. Not for UnionPay or Hipercard, whose cards may fail Luhn.
+};
+
+/// @brief Who holds what.
+enum class ownership : std::uint8_t
+{
+    asked,   ///< Everything asked for is given, age permitting.
+    surveyed ///< What is asked for becomes a chance, by the country's Global Findex shares.
+};
+
 /// @brief What a finance call asks for.
 ///
 /// Every generation call takes one; `finance_request{}` asks for the defaults.
@@ -69,10 +93,16 @@ struct finance_request
 
     std::optional<std::string> country{};  ///< ISO alpha-2, any case; unset: drawn by population. A territory only by name.
     std::optional<std::chrono::year_month_day> birth_date{}; ///< Unset: drawn uniformly for ages 18 to 80.
+    std::optional<std::string> given_names{}; ///< For the card's holder name.
+    std::optional<std::string> surname{};     ///< For the card's holder name.
     std::vector<account_kind> accounts{account_kind::current}; ///< The accounts asked for; empty: none.
+    std::vector<std::optional<card_kind>> cards{}; ///< The cards asked for; empty: none. Nullopt: kind drawn by the country's ratio.
+    std::optional<card_source> card_numbers{}; ///< Unset: network_range, or test_number under safe.
+    std::optional<std::string> network{};      ///< "visa"; unset: drawn for the country.
+    ownership holding{ownership::asked};       ///< surveyed: Global Findex decides who holds what.
     std::chrono::year_month_day reference_date{default_reference_date}; ///< The date the person is seen at.
-    bool safe{false};     ///< Accounts nobody holds, by each scheme's method (doc/data.md).
-    bool weighted{true};  ///< False: countries and banks are drawn uniformly.
+    bool safe{false};     ///< Accounts and cards by each method (doc/data.md); an explicit network_range is an error.
+    bool weighted{true};  ///< False: countries, banks and networks are drawn uniformly.
 };
 
 /// @brief A bank account.
@@ -92,6 +122,24 @@ struct bank_account
     std::chrono::year_month_day opened{}; ///< From the minimum age to the reference date.
     std::string evidence;        ///< "issuer", "reference", "secondary" or "generic".
     bool reserved{false};        ///< The safe method was applied; doc/data.md says what each promises.
+};
+
+/// @brief A payment card. There are no issuer ranges: the number encodes the
+///        network only, and `issuer` is a label.
+struct payment_card
+{
+    std::string network;         ///< "visa", "mastercard", "unionpay", "rupay".
+    card_kind kind{card_kind::debit}; ///< As asked for, or drawn.
+    card_source source{card_source::network_range}; ///< Where the number comes from.
+    std::string number;          ///< Digits only.
+    std::string formatted;       ///< In the network's groups; American Express 4-6-5.
+    std::string holder;          ///< Upper-case ASCII, 2 to 26 characters; empty without names or when unwritable.
+    std::string issuer;          ///< The first account's bank name, a label only; else empty.
+    std::string security_code;   ///< Always empty for network_range; the published one for a test number that needs it.
+    std::chrono::year_month_day issued{}; ///< On or before the reference date.
+    std::chrono::year_month expires{}; ///< Runs to that month's last day; the published one for a test number.
+    std::string test_source;     ///< "stripe" for a test_number; else empty.
+    bool reserved{false};        ///< True for test_number and wrong_check.
 };
 
 /// @brief The data tables, for layers.
@@ -1015,6 +1063,8 @@ struct country_row
     std::uint32_t primary{0};
     bool territory{false};
     std::vector<std::uint32_t> schemes; // primary first
+    std::int32_t bands{-1};     // into model::country_bands; -1: the default rows
+    std::int32_t ownership{-1}; // into model::ownership; -1: no row, so everything is held
 };
 
 // Splits a stripped display form back into its fields; nullopt when it cannot be.
@@ -1111,6 +1161,264 @@ struct country_row
     return p;
 }
 
+// -- Cards -------------------------------------------------------------------------
+
+[[nodiscard]] constexpr std::string_view card_kind_name(card_kind k)
+{
+    switch (k)
+    {
+    case card_kind::credit: return "credit";
+    case card_kind::prepaid: return "prepaid";
+    default: return "debit";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view card_source_name(card_source s)
+{
+    switch (s)
+    {
+    case card_source::test_number: return "test_number";
+    case card_source::wrong_check: return "wrong_check";
+    default: return "network_range";
+    }
+}
+
+[[nodiscard]] inline std::string lower(std::string_view text)
+{
+    std::string out{text};
+    for (char& c : out)
+    {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+    return out;
+}
+
+// One range of a network.
+struct network_row
+{
+    std::string from, to;
+    std::uint64_t low{0}, high{0};
+    std::size_t length{16};
+    std::vector<std::size_t> lengths;
+    std::vector<int> validity;
+    int min_age{18};
+    std::vector<std::size_t> groups;
+    bool luhn_firm{true};
+};
+
+struct card_network
+{
+    std::string name;
+    std::vector<network_row> rows;
+    core::weighted_table<std::uint32_t> weights;
+    bool luhn_firm{true}; // false: sources doubt that every card passes Luhn, so a failing number may be real
+};
+
+struct test_card
+{
+    std::string number;
+    std::uint32_t network{0};
+    std::string kind;     // "any", or a card kind's name
+    std::string country;  // empty: any country
+    std::optional<std::chrono::year_month> expires;
+    day_t last_day{0};    // the last day of `expires`
+    std::string security_code;
+    std::string source;
+};
+
+// A country's networks for one kind of card, with their bands' weights.
+struct band_list
+{
+    std::vector<std::uint32_t> networks;
+    std::vector<double> weights;
+    core::weighted_table<std::uint32_t> table;
+    std::vector<std::uint32_t> firm_networks; // those wrong_check may use
+    core::weighted_table<std::uint32_t> firm_table;
+};
+using band_set = std::array<band_list, 3>;
+
+struct shares
+{
+    double account{1.0};
+    double debit{1.0};
+    double credit{1.0};
+};
+
+[[nodiscard]] inline bool range_holds(const network_row& row, std::string_view number)
+{
+    if (number.size() < row.from.size()) return false;
+    const std::string_view prefix = number.substr(0, row.from.size());
+    return prefix >= std::string_view{row.from} && prefix <= std::string_view{row.to};
+}
+
+[[nodiscard]] inline bool length_allowed(const network_row& row, std::size_t size)
+{
+    return std::ranges::find(row.lengths, size) != row.lengths.end();
+}
+
+[[nodiscard]] inline bool network_holds(const card_network& n, std::string_view number)
+{
+    return std::ranges::any_of(n.rows, [&](const network_row& row) { return range_holds(row, number) && length_allowed(row, number.size()); });
+}
+
+[[nodiscard]] inline std::string group_number(std::string_view number, std::span<const std::size_t> groups)
+{
+    std::string out;
+    out.reserve(number.size() + groups.size());
+    std::size_t at = 0;
+    for (const auto size : groups)
+    {
+        if (at != 0) out.push_back(' ');
+        out += number.substr(at, size);
+        at += size;
+    }
+    return out;
+}
+
+// The format of the first of a network's ranges to hold the number and fit its length; else fours.
+[[nodiscard]] inline std::string format_card(const card_network& n, std::string_view number)
+{
+    for (const auto& row : n.rows)
+    {
+        std::size_t total = 0;
+        for (const auto size : row.groups) total += size;
+        if (total == number.size() && range_holds(row, number)) return group_number(number, row.groups);
+    }
+    return group_in_fours(number);
+}
+
+[[nodiscard]] inline std::string draw_range_number(const network_row& row, core::rng& r)
+{
+    const std::uint64_t prefix = core::uniform_int(r, row.low, row.high);
+    std::string body = std::to_string(prefix);
+    if (body.size() < row.from.size()) body.insert(0, row.from.size() - body.size(), '0');
+    body.reserve(row.length);
+    while (body.size() + 1 < row.length) body.push_back(static_cast<char>('0' + core::bounded(r, 10)));
+    body.push_back(core::luhn_digit(body));
+    return body;
+}
+
+[[nodiscard]] inline std::optional<std::uint32_t> decode_utf8(std::string_view s, std::size_t& i)
+{
+    const auto b0 = static_cast<std::uint8_t>(s[i]);
+    if (b0 < 0xC2U || b0 > 0xF4U) return std::nullopt;
+    const std::size_t size = b0 < 0xE0U ? 2 : (b0 < 0xF0U ? 3 : 4);
+    if (i + size > s.size()) return std::nullopt;
+    std::uint32_t cp = b0 & (0xFFU >> (size + 1));
+    for (std::size_t k = 1; k < size; ++k)
+    {
+        const auto b = static_cast<std::uint8_t>(s[i + k]);
+        if ((b & 0xC0U) != 0x80U) return std::nullopt;
+        cp = (cp << 6U) | (b & 0x3FU);
+    }
+    i += size;
+    return cp;
+}
+
+// One Latin letter from the Latin-1 Supplement or Latin Extended-A as its ASCII
+// base, upper case; empty for anything else.
+[[nodiscard]] inline std::string_view fold_latin(std::uint32_t cp)
+{
+    // U+00C0-U+00FF; '?' is not a letter, and the two-letter ones follow below.
+    static constexpr std::string_view latin1 =
+        "AAAAAA?CEEEEIIIIDNOOOOO?OUUUUY??"
+        "AAAAAA?CEEEEIIIIDNOOOOO?OUUUUY?Y";
+    // U+0100-U+017F, range by range.
+    static constexpr std::string_view extended =
+        "AAAAAACCCCCCCCDDDDEEEEEEEEEEGGGGGGGGHHHHIIIIIIIIIIIIJJKKKLLLLLLLLLLNNNNNNNNN"
+        "OOOOOO??RRRRRRSSSSSSSSTTTTTTUUUUUUUUUUUUWWYYYZZZZZZS";
+    static_assert(latin1.size() == 64 && extended.size() == 128);
+    switch (cp)
+    {
+    case 0xC6U: case 0xE6U: return "AE";
+    case 0xDEU: case 0xFEU: return "TH";
+    case 0xDFU: return "SS";
+    case 0x152U: case 0x153U: return "OE";
+    default: break;
+    }
+    if (cp >= 0xC0U && cp <= 0xFFU)
+    {
+        const std::string_view c = latin1.substr(cp - 0xC0U, 1);
+        return c == "?" ? std::string_view{} : c;
+    }
+    if (cp >= 0x100U && cp <= 0x17FU) return extended.substr(cp - 0x100U, 1);
+    return {};
+}
+
+// A name's words in upper-case ASCII, keeping hyphens and apostrophes and dropping
+// full stops; nullopt when a character has no Latin form.
+[[nodiscard]] inline std::optional<std::vector<std::string>> holder_words(std::string_view name)
+{
+    std::vector<std::string> words(1);
+    std::size_t i = 0;
+    while (i < name.size())
+    {
+        const auto b0 = static_cast<std::uint8_t>(name[i]);
+        if (b0 >= 0x80U)
+        {
+            const auto cp = decode_utf8(name, i);
+            if (!cp) return std::nullopt;
+            const std::string_view folded = fold_latin(*cp);
+            if (folded.empty()) return std::nullopt;
+            words.back() += folded;
+            continue;
+        }
+        const char c = name[i++];
+        if (c == ' ' || c == '\t')
+        {
+            if (!words.back().empty()) words.emplace_back();
+        }
+        else if (c >= 'a' && c <= 'z')
+        {
+            words.back().push_back(static_cast<char>(c - 'a' + 'A'));
+        }
+        else if ((c >= 'A' && c <= 'Z') || c == '-' || c == '\'')
+        {
+            words.back().push_back(c);
+        }
+        else if (c != '.')
+        {
+            return std::nullopt;
+        }
+    }
+    if (words.back().empty()) words.pop_back();
+    return words;
+}
+
+// Up to 26 characters, ISO/IEC 7813's track 1 name field: later given names shrink
+// to initials first, then the first, then the end is cut. Empty when unwritable.
+[[nodiscard]] inline std::string make_holder(const std::optional<std::string>& given, const std::optional<std::string>& surname)
+{
+    constexpr std::size_t widest = 26;
+    const auto given_words = given ? holder_words(*given) : std::vector<std::string>{};
+    const auto surname_words = surname ? holder_words(*surname) : std::vector<std::string>{};
+    if (!given_words || !surname_words) return {};
+    const auto join = [&](std::size_t full_given)
+    {
+        std::string out;
+        const auto add = [&out](std::string_view word)
+        {
+            if (!out.empty()) out.push_back(' ');
+            out += word;
+        };
+        for (std::size_t i = 0; i < given_words->size(); ++i)
+        {
+            add(i < full_given ? std::string_view{(*given_words)[i]} : std::string_view{(*given_words)[i]}.substr(0, 1));
+        }
+        for (const auto& word : *surname_words) add(word);
+        return out;
+    };
+    std::string out = join(given_words->size());
+    if (out.size() > widest) out = join(1);
+    if (out.size() > widest) out = join(0);
+    if (out.size() > widest)
+    {
+        out.resize(widest);
+        while (!out.empty() && out.back() == ' ') out.pop_back();
+    }
+    return out.size() < 2 ? std::string{} : out;
+}
+
 } // namespace fingen_detail
 /// @endcond
 
@@ -1124,6 +1432,7 @@ class finance
     std::string country_code;                 ///< ISO alpha-2 code.
     std::chrono::year_month_day birth_date{}; ///< Echoed, given or drawn.
     std::vector<bank_account> accounts;       ///< The accounts held, as asked for.
+    std::vector<payment_card> cards;          ///< The cards held, as asked for.
 
     /// @brief Retrieve the random seed used to generate this finance.
     /// @return The call seed; pass it to get_finance(request, seed) with
@@ -1139,7 +1448,7 @@ class finance
     }
 
     /// @brief Human-readable summary string.
-    /// @return For example `DE, EUR, DE89 3704 0044 0532 0130 00 (Commerzbank)`.
+    /// @return For example `DE, EUR, DE89 3704 0044 0532 0130 00 (Commerzbank), visa debit ...4242`.
     [[nodiscard]] std::string to_string() const
     {
         std::string out = country_code;
@@ -1148,6 +1457,10 @@ class finance
         {
             out += ", " + a.formatted;
             if (!a.bank_name.empty()) out += " (" + a.bank_name + ")";
+        }
+        for (const auto& c : cards)
+        {
+            out += ", " + c.network + " " + std::string{fingen_detail::card_kind_name(c.kind)} + " ..." + c.number.substr(c.number.size() - 4);
         }
         return out;
     }
@@ -1178,6 +1491,24 @@ class finance
                 .field("opened", fingen_detail::iso_date(a.opened))
                 .field("evidence", a.evidence)
                 .field("reserved", a.reserved)
+                .end_object();
+        }
+        w.end_array().key("cards").begin_array();
+        for (const auto& c : cards)
+        {
+            w.begin_object()
+                .field("network", c.network)
+                .field("kind", fingen_detail::card_kind_name(c.kind))
+                .field("source", fingen_detail::card_source_name(c.source))
+                .field("number", c.number)
+                .field("formatted", c.formatted)
+                .field("holder", c.holder)
+                .field("issuer", c.issuer)
+                .field("security_code", c.security_code)
+                .field("issued", fingen_detail::iso_date(c.issued))
+                .field("expires", fingen_detail::iso_date(c.expires.year() / c.expires.month() / std::chrono::day{1}).substr(0, 7))
+                .field("test_source", c.test_source)
+                .field("reserved", c.reserved)
                 .end_object();
         }
         w.end_array().key("signature");
@@ -1275,8 +1606,11 @@ class fng
     ///        result. Does not touch the instance engine.
     /// @return The finance.
     /// @throws std::runtime_error If no data has been loaded.
-    /// @throws std::invalid_argument For an unknown country; a birth date after
-    ///         the reference date or before 1900; an invalid reference date.
+    /// @throws std::invalid_argument For an unknown country or network; wrong_check
+    ///         on a network whose cards may fail Luhn; a birth
+    ///         date after the reference date or before 1900; an invalid reference
+    ///         date; `safe` with an explicit network_range; a test number asked for
+    ///         when no sandbox has one for the network, or none runs to the date.
     [[nodiscard]] finance get_finance(const finance_request& request, std::uint64_t call_seed) const
     {
         using namespace fingen_detail;
@@ -1285,16 +1619,45 @@ class fng
         const day_t reference = reference_of_(request);
         const auto& country = _model.countries[country_of_(request, call)];
         const day_t birth = birth_of_(request, reference, call);
+        const card_plan plan = plan_of_(request);
+
+        // One chance per person, so a debit card's holder is among the account holders.
+        double held = 0.0;
+        double credit = 0.0;
+        if (request.holding == ownership::surveyed)
+        {
+            auto r = call.split("ownership");
+            held = core::uniform01(r);
+            credit = core::uniform01(r);
+        }
+        const shares odds = shares_of_(country, birth, reference);
+        const bool surveyed = request.holding == ownership::surveyed;
 
         finance v;
         v._signature = {.seed = call_seed, .data = data_hash()};
         v.country_code = country.code;
         v.birth_date = ymd_of(birth);
-        v.accounts.reserve(request.accounts.size());
-        for (std::size_t i = 0; i < request.accounts.size(); ++i)
+        if (!surveyed || held < odds.account)
         {
-            auto account = make_account_(request.accounts[i], i, country, request, birth, reference, call);
-            if (account) v.accounts.push_back(std::move(*account));
+            v.accounts.reserve(request.accounts.size());
+            for (std::size_t i = 0; i < request.accounts.size(); ++i)
+            {
+                auto account = make_account_(request.accounts[i], i, country, request, birth, reference, call);
+                if (account) v.accounts.push_back(std::move(*account));
+            }
+        }
+        const std::string issuer = v.accounts.empty() ? std::string{} : v.accounts.front().bank_name;
+        const std::string holder = request.cards.empty() ? std::string{} : make_holder(request.given_names, request.surname);
+        v.cards.reserve(request.cards.size());
+        for (std::size_t i = 0; i < request.cards.size(); ++i)
+        {
+            auto card = make_card_(request.cards[i], i, country, request, plan, v.cards, birth, reference, call);
+            if (!card) continue;
+            if (surveyed && card->kind == card_kind::debit && held >= odds.debit) continue;
+            if (surveyed && card->kind == card_kind::credit && credit >= odds.credit) continue;
+            card->issuer = issuer;
+            card->holder = holder;
+            v.cards.push_back(std::move(*card));
         }
         return v;
     }
@@ -1422,6 +1785,51 @@ class fng
             if (t.number == plain) return true;
         }
         return number_valid_(_model, s, plain, true);
+    }
+
+    /// @brief The card networks of a country.
+    /// @param country Alpha-2 code, any case.
+    /// @return Network names, as `card_networks.tsv` lists them, for any kind of card.
+    /// @throws std::invalid_argument If the country is unknown.
+    [[nodiscard]] std::vector<std::string> networks(std::string_view country) const
+    {
+        std::vector<std::string> out;
+        for (const auto& list : bands_of_(_model.countries[country_index_(country)]))
+        {
+            for (const auto index : list.networks)
+            {
+                const auto& name = _model.networks[index].name;
+                if (std::ranges::find(out, name) == out.end()) out.push_back(name);
+            }
+        }
+        return out;
+    }
+
+    /// @brief Whether a text is a well-formed card number: the length and the Luhn
+    ///        digit, for a network whose range holds it. It looks nothing up.
+    /// @param number The number, with or without spaces and hyphens.
+    /// @return Whether the number is valid.
+    [[nodiscard]] bool card_valid(std::string_view number) const
+    {
+        const std::string plain = fingen_detail::strip_separators(number);
+        if (!fingen_detail::all_digits(plain) || !core::luhn_valid(plain)) return false;
+        return std::ranges::any_of(_model.networks, [&](const auto& n) { return fingen_detail::network_holds(n, plain); });
+    }
+
+    /// @brief The networks whose ranges hold a number at its length. Ranges overlap,
+    ///        so this is a list. The Luhn digit does not matter here.
+    /// @param number The number, with or without spaces and hyphens.
+    /// @return Network names; empty when no network holds it.
+    [[nodiscard]] std::vector<std::string> card_networks(std::string_view number) const
+    {
+        const std::string plain = fingen_detail::strip_separators(number);
+        std::vector<std::string> out;
+        if (!fingen_detail::all_digits(plain)) return out;
+        for (const auto& n : _model.networks)
+        {
+            if (fingen_detail::network_holds(n, plain)) out.push_back(n.name);
+        }
+        return out;
     }
 
     // -- Data management --------------------------------------------------
@@ -1618,7 +2026,7 @@ class fng
         case table::networks:
             return {.key = {"network", "range_from"},
                     .required = {"range_to", "length", "lengths", "weight"},
-                    .optional = {"validity_years", "min_age", "format", "source"}};
+                    .optional = {"validity_years", "min_age", "format", "luhn", "source"}};
         case table::card_networks:
             return {.key = {"country_code", "kind", "network"}, .required = {"band", "evidence"}, .optional = {}};
         case table::test_cards:
@@ -1654,7 +2062,208 @@ class fng
         std::unordered_map<std::string, std::uint32_t> scheme_index;
         core::weighted_table<std::uint32_t> drawn_countries; // by population, without territories
         std::vector<std::uint32_t> drawable_countries;       // the same, for unweighted draws
+        std::vector<fingen_detail::card_network> networks;
+        std::unordered_map<std::string, std::uint32_t> network_index;
+        std::vector<fingen_detail::test_card> test_cards;
+        fingen_detail::band_set default_bands;               // the `*` rows
+        std::vector<fingen_detail::band_set> country_bands;  // into which country_row::bands points
+        std::vector<std::array<fingen_detail::shares, 3>> ownership; // all, young, older; into which country_row::ownership points
     };
+
+    // Comma-separated whole numbers.
+    static std::vector<std::size_t> whole_list_(const core::tsv_row& row, std::string_view column, std::string_view text, char separator)
+    {
+        std::vector<std::size_t> out;
+        std::size_t at = 0;
+        while (at <= text.size() && !text.empty())
+        {
+            const auto end = std::min(text.find(separator, at), text.size());
+            out.push_back(static_cast<std::size_t>(whole_(row, column, text.substr(at, end - at))));
+            at = end + 1;
+        }
+        return out;
+    }
+
+    static fingen_detail::network_row parse_network_row_(const core::tsv_row& row)
+    {
+        using namespace fingen_detail;
+        network_row n;
+        n.from = std::string{row["range_from"]};
+        n.to = std::string{row["range_to"]};
+        if (n.from.empty() || n.from.size() != n.to.size() || n.from.size() > 18 || !all_digits(n.from) || !all_digits(n.to) || n.from > n.to)
+        {
+            throw row.error("range_to", "the range does not parse");
+        }
+        n.low = std::stoull(n.from);
+        n.high = std::stoull(n.to);
+        n.length = static_cast<std::size_t>(whole_(row, "length", row["length"]));
+        if (n.length < 12 || n.length > 19 || n.length <= n.from.size()) throw row.error("length", "a card number has 12 to 19 digits");
+        n.lengths = whole_list_(row, "lengths", row["lengths"], ',');
+        if (!length_allowed(n, n.length)) throw row.error("lengths", "does not include the length");
+        const auto validity = cell_(row, "validity_years");
+        for (const auto years : whole_list_(row, "validity_years", validity.empty() ? std::string_view{"3,4,5"} : validity, ','))
+        {
+            if (years == 0 || years > 30) throw row.error("validity_years", "expected from 1 to 30 years");
+            n.validity.push_back(static_cast<int>(years));
+        }
+        const auto age = cell_(row, "min_age");
+        if (!age.empty()) n.min_age = whole_(row, "min_age", age);
+        const auto format = cell_(row, "format");
+        n.groups = whole_list_(row, "format", format, '-');
+        if (!format.empty())
+        {
+            std::size_t total = 0;
+            for (const auto size : n.groups) total += size;
+            if (total != n.length) throw row.error("format", "does not add up to the length");
+        }
+        if (!(row.get<double>("weight") >= 0.0)) throw row.error("weight", "must not be negative");
+        const auto luhn = cell_(row, "luhn");
+        if (!luhn.empty() && luhn != "firm" && luhn != "unsure") throw row.error("luhn", "expected firm or unsure");
+        n.luhn_firm = luhn != "unsure";
+        return n;
+    }
+
+    static fingen_detail::test_card parse_test_card_(const core::tsv_row& row)
+    {
+        using namespace fingen_detail;
+        test_card c;
+        c.number = std::string{row["number"]};
+        if (!all_digits(c.number) || !core::luhn_valid(c.number)) throw row.error("number", "fails Luhn");
+        c.kind = std::string{row["kind"]};
+        if (c.kind != "any" && c.kind != "debit" && c.kind != "credit" && c.kind != "prepaid") throw row.error("kind", "expected any, debit, credit or prepaid");
+        c.country = upper(cell_(row, "country_code"));
+        c.source = std::string{row["source"]};
+        c.security_code = std::string{cell_(row, "security_code")};
+        if (!c.security_code.empty() && !all_digits(c.security_code)) throw row.error("security_code", "expected digits");
+        const auto expires = cell_(row, "expires");
+        if (!expires.empty())
+        {
+            if (expires.size() != 7 || expires[4] != '-' || !all_digits(expires.substr(0, 4)) || !all_digits(expires.substr(5)))
+            {
+                throw row.error("expires", "expected YYYY-MM");
+            }
+            const std::chrono::year_month ym{std::chrono::year{whole_(row, "expires", expires.substr(0, 4))},
+                                             std::chrono::month{static_cast<unsigned>(whole_(row, "expires", expires.substr(5)))}};
+            if (!ym.ok()) throw row.error("expires", "expected YYYY-MM");
+            c.expires = ym;
+            c.last_day = to_day(std::chrono::year_month_day{std::chrono::year_month_day_last{ym.year(), std::chrono::month_day_last{ym.month()}}});
+        }
+        return c;
+    }
+
+    static double band_weight_(const core::tsv_row& row)
+    {
+        const auto band = row["band"];
+        if (band == "main") return 8.0;
+        if (band == "common") return 2.0;
+        if (band == "rare") return 0.5;
+        throw row.error("band", "expected main, common or rare");
+    }
+
+    // A kind's rows where it has any, else the rows for every kind.
+    static fingen_detail::band_list bands_for_(const std::vector<const core::tsv_row*>& rows, const model& m, card_kind kind)
+    {
+        fingen_detail::band_list list;
+        const std::string_view name = fingen_detail::card_kind_name(kind);
+        const bool specific = std::ranges::any_of(rows, [&](const auto* row) { return (*row)["kind"] == name; });
+        for (const auto* row : rows)
+        {
+            if ((*row)["kind"] != (specific ? name : std::string_view{"*"})) continue;
+            const auto network = m.network_index.at(std::string{(*row)["network"]});
+            const double weight = band_weight_(*row);
+            list.networks.push_back(network);
+            list.weights.push_back(weight);
+            list.table.add(network, weight);
+            if (m.networks[network].luhn_firm)
+            {
+                list.firm_networks.push_back(network);
+                list.firm_table.add(network, weight);
+            }
+        }
+        return list;
+    }
+
+    static void build_cards_(const tables& t, model& m)
+    {
+        using namespace fingen_detail;
+        for (const auto& row : t.at(index_(table::networks)).rows())
+        {
+            const std::string name{row["network"]};
+            const auto [it, fresh] = m.network_index.try_emplace(name, static_cast<std::uint32_t>(m.networks.size()));
+            if (fresh)
+            {
+                m.networks.emplace_back();
+                m.networks.back().name = name;
+            }
+            auto& network = m.networks[it->second];
+            network.weights.add(static_cast<std::uint32_t>(network.rows.size()), row.get<double>("weight"));
+            network.rows.push_back(parse_network_row_(row));
+            network.luhn_firm = network.luhn_firm && network.rows.back().luhn_firm;
+        }
+
+        std::vector<const core::tsv_row*> default_rows;
+        std::map<std::string, std::vector<const core::tsv_row*>> rows_by_country;
+        for (const auto& row : t.at(index_(table::card_networks)).rows())
+        {
+            const std::string network{row["network"]};
+            if (!m.network_index.contains(network)) throw std::invalid_argument("card_networks: unknown network " + network);
+            const std::string code = upper(row["country_code"]);
+            if (code == "*")
+            {
+                default_rows.push_back(&row);
+                continue;
+            }
+            if (!m.country_index.contains(code)) throw std::invalid_argument("card_networks: unknown country " + code);
+            rows_by_country[code].push_back(&row);
+        }
+        constexpr std::array<card_kind, 3> kinds{card_kind::debit, card_kind::credit, card_kind::prepaid};
+        for (std::size_t k = 0; k < kinds.size(); ++k) m.default_bands.at(k) = bands_for_(default_rows, m, kinds.at(k));
+        for (const auto& [code, rows] : rows_by_country)
+        {
+            band_set set;
+            for (std::size_t k = 0; k < kinds.size(); ++k)
+            {
+                set.at(k) = bands_for_(rows, m, kinds.at(k));
+                if (set.at(k).networks.empty()) set.at(k) = m.default_bands.at(k);
+            }
+            m.countries[m.country_index.at(code)].bands = static_cast<std::int32_t>(m.country_bands.size());
+            m.country_bands.push_back(std::move(set));
+        }
+
+        for (const auto& row : t.at(index_(table::test_cards)).rows())
+        {
+            const std::string network{row["network"]};
+            const auto found = m.network_index.find(network);
+            if (found == m.network_index.end()) throw std::invalid_argument("test_cards: unknown network " + network);
+            auto card = parse_test_card_(row);
+            if (!network_holds(m.networks[found->second], card.number))
+            {
+                throw std::invalid_argument("test_cards: " + card.number + " is outside the ranges of " + network);
+            }
+            card.network = found->second;
+            m.test_cards.push_back(std::move(card));
+        }
+
+        for (const auto& row : t.at(index_(table::ownership)).rows())
+        {
+            const std::string code = upper(row["country_code"]);
+            const auto found = m.country_index.find(code);
+            if (found == m.country_index.end()) continue; // a country a layer removed
+            auto& c = m.countries[found->second];
+            if (c.ownership < 0)
+            {
+                c.ownership = static_cast<std::int32_t>(m.ownership.size());
+                m.ownership.emplace_back();
+            }
+            const shares s{.account = row.get<double>("account"), .debit = row.get<double>("debit"), .credit = row.get<double>("credit")};
+            const auto group = row["group"];
+            auto& set = m.ownership[static_cast<std::size_t>(c.ownership)];
+            if (group == "all") set.at(0) = s;
+            else if (group == "young") set.at(1) = s;
+            else if (group == "older") set.at(2) = s;
+            else throw std::invalid_argument("ownership: unknown group " + std::string{group});
+        }
+    }
 
     // Cells of optional columns, which a layer may leave out.
     static std::string_view cell_(const core::tsv_row& row, std::string_view column)
@@ -1838,27 +2447,15 @@ class fng
         case table::iban_formats: (void)parse_format_(row); break;
         case table::banks: (void)parse_bank_(row); break;
         case table::test_accounts: break;
-        case table::networks:
-        {
-            const auto from = row["range_from"];
-            const auto to = row["range_to"];
-            if (from.empty() || from.size() != to.size() || !fingen_detail::all_digits(from) || !fingen_detail::all_digits(to) || from > to)
-            {
-                throw row.error("range_to", "the range does not parse");
-            }
-            const int length = whole_(row, "length", row["length"]);
-            if (length < 12 || length > 19) throw row.error("length", "a card number has 12 to 19 digits");
-            break;
-        }
+        case table::networks: (void)parse_network_row_(row); break;
         case table::card_networks:
         {
-            const auto band = row["band"];
-            if (band != "main" && band != "common" && band != "rare") throw row.error("band", "expected main, common or rare");
+            (void)band_weight_(row);
+            const auto kind = row["kind"];
+            if (kind != "*" && kind != "debit" && kind != "credit" && kind != "prepaid") throw row.error("kind", "expected *, debit, credit or prepaid");
             break;
         }
-        case table::test_cards:
-            if (!core::luhn_valid(row["number"])) throw row.error("number", "fails Luhn");
-            break;
+        case table::test_cards: (void)parse_test_card_(row); break;
         case table::ownership:
             for (const auto column : {"account", "debit", "credit"})
             {
@@ -2056,6 +2653,7 @@ class fng
             auto& list = m.countries[found->second].schemes;
             if (list.front() != i) list.push_back(i);
         }
+        build_cards_(t, m);
         return m;
     }
 
@@ -2370,6 +2968,251 @@ class fng
         if (request.safe && s.safe == safe_method::test_value) fill_test_value_(out, s, number_r);
         else if (is_iban_builder(s.builder)) fill_iban_(out, s, kind, request, birth, bank_r, number_r);
         else fill_national_(out, s, request, bank_r, number_r);
+        return out;
+    }
+
+    // -- Cards ------------------------------------------------------------
+
+    // What a request settles for all of its cards.
+    struct card_plan
+    {
+        card_source source{card_source::network_range};
+        std::optional<std::uint32_t> network;
+    };
+
+    [[nodiscard]] card_plan plan_of_(const finance_request& request) const
+    {
+        if (request.safe && request.card_numbers == card_source::network_range)
+        {
+            throw std::invalid_argument("safe cannot give a network_range card, which may be real");
+        }
+        card_plan plan;
+        plan.source = request.card_numbers.value_or(request.safe ? card_source::test_number : card_source::network_range);
+        if (request.network)
+        {
+            const auto found = _model.network_index.find(fingen_detail::lower(*request.network));
+            if (found == _model.network_index.end()) throw std::invalid_argument("unknown network '" + *request.network + "'");
+            plan.network = found->second;
+            if (plan.source == card_source::wrong_check && !_model.networks[found->second].luhn_firm)
+            {
+                throw std::invalid_argument("wrong_check needs a network whose cards surely pass Luhn, and " + *request.network + "'s may not");
+            }
+        }
+        return plan;
+    }
+
+    [[nodiscard]] const fingen_detail::band_set& bands_of_(const fingen_detail::country_row& country) const
+    {
+        return country.bands < 0 ? _model.default_bands : _model.country_bands[static_cast<std::size_t>(country.bands)];
+    }
+
+    // The person's shares by age at the reference date: Findex's 15 to 24, and 25 and over.
+    [[nodiscard]] fingen_detail::shares shares_of_(const fingen_detail::country_row& country, fingen_detail::day_t birth, fingen_detail::day_t reference) const
+    {
+        using namespace fingen_detail;
+        if (country.ownership < 0) return {};
+        const auto& set = _model.ownership[static_cast<std::size_t>(country.ownership)];
+        return set.at(anniversary(birth, 25) > reference ? 1 : 2);
+    }
+
+    [[nodiscard]] card_kind draw_kind_(const fingen_detail::country_row& country, core::rng& r) const
+    {
+        const double draw = core::uniform01(r);
+        if (country.ownership < 0) return card_kind::debit;
+        const auto& all = _model.ownership[static_cast<std::size_t>(country.ownership)].at(0);
+        const double total = all.debit + all.credit;
+        return total > 0.0 && draw >= all.debit / total ? card_kind::credit : card_kind::debit;
+    }
+
+    // Who may hold it: a credit card from the network's minimum age, the others from 16.
+    [[nodiscard]] static fingen_detail::day_t earliest_day_(card_kind kind, int network_min_age, fingen_detail::day_t birth)
+    {
+        constexpr int debit_min_age = 16;
+        return fingen_detail::anniversary(birth, kind == card_kind::credit ? network_min_age : std::min(debit_min_age, network_min_age));
+    }
+
+    static std::string draw_security_code_(const fingen_detail::card_network& network, core::rng& r)
+    {
+        std::string code;
+        const std::size_t size = network.name == "amex" ? 4 : 3;
+        while (code.size() < size) code.push_back(static_cast<char>('0' + core::bounded(r, 10)));
+        return code;
+    }
+
+    // A card drawn by the rule: the one running at the reference date was issued at its last renewal.
+    static void set_drawn_dates_(payment_card& out, const std::vector<int>& validity, fingen_detail::day_t earliest,
+                                 fingen_detail::day_t reference, core::rng& r)
+    {
+        using namespace fingen_detail;
+        const int years = validity.at(static_cast<std::size_t>(core::bounded(r, validity.size())));
+        const auto seen = ymd_of(reference);
+        // A card issued in this month or later still runs at the reference date.
+        const day_t oldest = make_day(static_cast<int>(seen.year()) - years, static_cast<unsigned>(seen.month()), 1);
+        out.issued = ymd_of(core::uniform_int(r, std::max(oldest, earliest), reference));
+        out.expires = std::chrono::year_month{out.issued.year(), out.issued.month()} + std::chrono::years{years};
+    }
+
+    // The network among those with a test number here, then the row. Countries first,
+    // then numbers for no country; an explicit network may take another country's.
+    // A number this person already holds comes only when nothing else fits.
+    [[nodiscard]] const fingen_detail::test_card& pick_test_card_(card_kind kind, const fingen_detail::country_row& country,
+                                                                  const finance_request& request, const card_plan& plan,
+                                                                  const std::vector<payment_card>& held,
+                                                                  fingen_detail::day_t reference, core::rng& r) const
+    {
+        using namespace fingen_detail;
+        const std::string_view kind_name = card_kind_name(kind);
+        std::vector<const test_card*> pool;
+        const auto gather = [&](bool may_repeat)
+        {
+            const auto gather_where = [&](const auto& where)
+            {
+                pool.clear();
+                for (const auto& c : _model.test_cards)
+                {
+                    const bool fits = (c.kind == "any" || c.kind == kind_name) && (!plan.network || c.network == *plan.network);
+                    const bool running = !c.expires || c.last_day >= reference;
+                    const bool fresh = may_repeat || std::ranges::none_of(held, [&c](const payment_card& h) { return h.number == c.number; });
+                    if (fits && running && fresh && where(c)) pool.push_back(&c);
+                }
+            };
+            gather_where([&](const test_card& c) { return c.country == country.code; });
+            if (pool.empty()) gather_where([](const test_card& c) { return c.country.empty(); });
+            if (pool.empty() && plan.network) gather_where([](const test_card&) { return true; });
+        };
+        gather(false);
+        if (pool.empty()) gather(true);
+        if (pool.empty()) throw std::invalid_argument("no test number for this network and kind runs to the reference date");
+
+        // The country's bands among the networks found; flat when it lists none of them.
+        std::vector<std::uint32_t> found;
+        for (const auto* c : pool)
+        {
+            if (std::ranges::find(found, c->network) == found.end()) found.push_back(c->network);
+        }
+        const auto& bands = bands_of_(country).at(static_cast<std::size_t>(kind));
+        core::weighted_table<std::uint32_t> weights;
+        for (const auto network : found)
+        {
+            const auto at = std::ranges::find(bands.networks, network);
+            const double band = at == bands.networks.end() ? 0.0 : bands.weights[static_cast<std::size_t>(at - bands.networks.begin())];
+            weights.add(network, request.weighted ? band : 1.0);
+        }
+        std::uint32_t network = found[static_cast<std::size_t>(core::bounded(r, found.size()))];
+        if (weights.total_weight() > 0.0) network = weights.pick(r);
+        std::erase_if(pool, [network](const test_card* c) { return c->network != network; });
+        return *pool[static_cast<std::size_t>(core::bounded(r, pool.size()))];
+    }
+
+    [[nodiscard]] std::optional<payment_card> make_card_(const std::optional<card_kind>& asked, std::size_t position,
+                                                         const fingen_detail::country_row& country, const finance_request& request,
+                                                         const card_plan& plan, const std::vector<payment_card>& held,
+                                                         fingen_detail::day_t birth, fingen_detail::day_t reference,
+                                                         const core::rng& call) const
+    {
+        using namespace fingen_detail;
+        const core::rng stream = call.split("card").split(static_cast<std::uint64_t>(position));
+        auto kind_r = stream.split("kind");
+        auto network_r = stream.split("network");
+        auto number_r = stream.split("number");
+        auto dates_r = stream.split("dates");
+        auto code_r = stream.split("code");
+
+        card_kind kind = asked.value_or(card_kind::debit);
+        if (!asked) kind = draw_kind_(country, kind_r);
+
+        payment_card out;
+        out.source = plan.source;
+        out.reserved = plan.source != card_source::network_range;
+        const test_card* test = nullptr;
+        const card_network* network = nullptr;
+        const network_row* row = nullptr;
+        if (plan.source == card_source::test_number)
+        {
+            test = &pick_test_card_(kind, country, request, plan, held, reference, network_r);
+            network = &_model.networks[test->network];
+        }
+        else
+        {
+            const auto& bands = bands_of_(country).at(static_cast<std::size_t>(kind));
+            if (plan.network)
+            {
+                network = &_model.networks[*plan.network];
+            }
+            else
+            {
+                const bool firm_only = plan.source == card_source::wrong_check;
+                const auto& choices = firm_only ? bands.firm_networks : bands.networks;
+                if (choices.empty()) throw std::invalid_argument("no card network to use for country " + country.code);
+                const auto& table = firm_only ? bands.firm_table : bands.table;
+                const std::uint32_t index = request.weighted ? table.pick(network_r)
+                                                             : choices[static_cast<std::size_t>(core::bounded(network_r, choices.size()))];
+                network = &_model.networks[index];
+            }
+            row = &network->rows[network->weights.pick(number_r)];
+        }
+
+        const int min_age = row != nullptr ? row->min_age : network->rows.front().min_age;
+        // A drawn kind the person is too young for gives way; an asked one is left out.
+        if (!asked && kind == card_kind::credit && earliest_day_(kind, min_age, birth) > reference) kind = card_kind::debit;
+        const day_t earliest = earliest_day_(kind, min_age, birth);
+        if (earliest > reference) return std::nullopt;
+
+        out.network = network->name;
+        out.kind = kind;
+        if (test != nullptr)
+        {
+            out.number = test->number;
+            out.test_source = test->source;
+            out.security_code = test->security_code.empty() ? draw_security_code_(*network, code_r) : test->security_code;
+            if (test->expires)
+            {
+                // The published expiry stands; the card was issued in the last five years.
+                const day_t oldest = anniversary(reference, -5) + 1;
+                out.issued = ymd_of(core::uniform_int(dates_r, std::max(oldest, earliest), reference));
+                out.expires = *test->expires;
+            }
+            else
+            {
+                set_drawn_dates_(out, network->rows.front().validity, earliest, reference, dates_r);
+            }
+        }
+        else
+        {
+            // Outside the range of another network of this country, while one is left.
+            out.number = draw_range_number(*row, number_r);
+            const auto& others = bands_of_(country).at(static_cast<std::size_t>(kind)).networks;
+            const auto taken = [&]
+            {
+                return std::ranges::any_of(others, [&](std::uint32_t other)
+                                           { return &_model.networks[other] != network && network_holds(_model.networks[other], out.number); });
+            };
+            for (int attempt = 0; attempt < max_redraws_ && taken(); ++attempt)
+            {
+                // The range too, since a whole range can lie inside another network's.
+                row = &network->rows[network->weights.pick(number_r)];
+                out.number = draw_range_number(*row, number_r);
+            }
+            if (plan.source == card_source::wrong_check)
+            {
+                // Outside any network whose cards may fail Luhn: there, this could be a real number.
+                const auto doubtful = [&]
+                {
+                    return std::ranges::any_of(_model.networks, [&](const card_network& n) { return !n.luhn_firm && network_holds(n, out.number); });
+                };
+                int attempts = 0;
+                while (doubtful())
+                {
+                    if (++attempts > max_redraws_) throw std::runtime_error("no wrong_check number outside the doubtful ranges for " + network->name);
+                    row = &network->rows[network->weights.pick(number_r)];
+                    out.number = draw_range_number(*row, number_r);
+                }
+                out.number.back() = other_digit(out.number.back(), number_r);
+                out.security_code = draw_security_code_(*network, code_r);
+            }
+            set_drawn_dates_(out, row->validity, earliest, reference, dates_r);
+        }
+        out.formatted = format_card(*network, out.number);
         return out;
     }
 
