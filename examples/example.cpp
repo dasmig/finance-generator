@@ -12,24 +12,30 @@ int main()
         return 1;
     }
 
+    // Realistic accounts and cards may match real ones, so the examples use safe.
     std::cout << "Random people, drawn by population:\n";
+    dasmig::finance_request anyone;
+    anyone.safe = true;
+    anyone.cards = {std::nullopt};
     for (int i = 0; i < 5; ++i)
     {
-        std::cout << "  " << gen.get_finance(dasmig::finance_request{}) << '\n';
+        std::cout << "  " << gen.get_finance(anyone) << '\n';
     }
 
     std::cout << "\nA person in Germany, as JSON, from a fixed seed:\n";
     dasmig::finance_request germany;
     germany.country = "DE";
+    germany.safe = true;
     std::cout << "  " << gen.get_finance(germany, std::uint64_t{42}).to_json() << '\n';
 
-    std::cout << "\nTwo accounts in Brazil, whose IBAN carries the account type:\n";
+    std::cout << "\nTwo accounts in Brazil, whose IBAN carries the account type, each with a wrong check digit:\n";
     dasmig::finance_request brazil;
     brazil.country = "BR";
+    brazil.safe = true;
     brazil.accounts = {dasmig::account_kind::current, dasmig::account_kind::savings};
     for (const auto& account : gen.get_finance(brazil, std::uint64_t{42}).accounts)
     {
-        std::cout << "  " << account.iban << "  " << account.formatted << "  " << account.bank_name << '\n';
+        std::cout << "  " << account.iban << "  " << dasmig::fng::instance().is_valid(account.scheme, account.iban) << '\n';
     }
 
     std::cout << "\nSafe accounts, by each scheme's method (doc/data.md):\n";

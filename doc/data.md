@@ -18,7 +18,7 @@ Accounts drawn without `safe` are structurally valid and may match a real person
 | `test_cards.tsv` | 129 | 129 |
 | `ownership.tsv` | 597 | 597 |
 
-The tables total 0.28 MB in `lite` and 2.13 MB in `full`. Only `banks.tsv` differs in its rows: `lite` keeps at most the 60 heaviest banks of a scheme, and `full` has every code of the long lists, such as Germany's and Britain's. Cutting a list stops it being complete, so `list_complete` and `safe_method` in `schemes.tsv` differ by tier (see [Safe](#safe)).
+The tables total 0.28 MB in `lite` and 2.13 MB in `full`. Only `banks.tsv` differs in its rows: `lite` keeps at most the 60 heaviest banks of a scheme, and `full` has every code of the long lists, such as Germany's and Britain's. Cutting a list stops it being complete, so `list_complete` and `safe_method` in `schemes.tsv` differ by tier (see the Safe section below).
 
 ## Columns
 
@@ -131,7 +131,7 @@ On `lite`, a shortened list cannot show a code is unassigned, so CZ, IT and PL u
 
 Limits of each method:
 
-- A `test_value` number can be at a real bank's code, as `DE89 3704 0044 0532 0130 00` is at Commerzbank's. It promises "a number a sandbox publishes", and the list is finite, so a unique batch above its size is refused.
+- A `test_value` number can be at a real bank's code, as `DE89 3704 0044 0532 0130 00` is at Commerzbank's. It promises "a number a sandbox publishes", and the list is finite, so a unique batch keyed on the number runs out of attempts and throws.
 - `wrong_national` and `wrong_outer` make the whole number invalid. Its bank, branch and account fields alone can still be real.
 - Brazil's everyday form has no check digit, so a safe Brazilian account shows its IBAN in `formatted`. Its `bank_code`, `branch_code` and `account_number` remain a plausible everyday account.
 
@@ -175,7 +175,7 @@ make embed
 
 `prepare_iban`, `prepare_schemes` and `prepare_banks` must run in that order. A rebuild is byte-identical. Raw files stay out of the repository.
 
-`scripts/validate_accounts.py` checks the library's output against implementations it does not share: schwifty, python-stdnum (LGPL, used only by this script, from a virtual environment, never shipped), and code written in the script from the national rules. It draws 1,000 people with two accounts each per country at three dates, plus a safe sample. On 2026-11-06 both tiers met the target, of 1,320,000 realistic and 420,000 safe accounts each.
+`scripts/validate_accounts.py` checks the library's output against implementations it does not share: schwifty, python-stdnum (LGPL, used only by this script, from a virtual environment, never shipped), and code written in the script from the national rules. It draws 1,000 people with two accounts each per country at three dates, plus a safe sample. On 2026-11-06 both tiers met the target, of 1,320,000 realistic and 420,000 safe accounts each. It also draws a fifth as many people with four cards each from each source, and checks them against stdnum's Luhn and the card tables as the script reads them: 528,000 `network_range`, 352,000 `test_number` and 176,000 `wrong_check` per tier, all as declared.
 
 | Oracle | Schemes reached |
 | --- | --- |

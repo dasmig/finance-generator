@@ -60,7 +60,7 @@ auto v = gen.get_finance(dasmig::finance_request{});      // draws a seed from t
 auto w = gen.get_finance(dasmig::finance_request{}, 1234);  // deterministic; does not touch the engine
 v.country_code;             // "DE"
 v.birth_date;               // given or drawn
-v.accounts.front().iban;    // "DE69613700860438549826"
+v.accounts.front().iban;    // an IBAN, where the country has that form
 ```
 
 A request says what to generate, and nothing is stored on the generator:
@@ -72,7 +72,7 @@ q.country = "BR";                         // any case; unset: drawn by populatio
 q.birth_date = year{1980} / May / day{17}; // unset: drawn for ages 18 to 80
 q.reference_date = year{2015} / June / day{1}; // the date the person is seen at
 q.accounts = {dasmig::account_kind::current, dasmig::account_kind::savings}; // one account each
-q.weighted = false;                       // flat over countries and banks
+q.weighted = false;                       // flat over countries, banks and networks
 q.safe = true;                            // see below
 ```
 
@@ -85,7 +85,7 @@ Each account has:
 | `scheme` | `"iban-de"`, `"us-aba"`, `"mx-clabe"`, `"generic-ke"` |
 | `kind` | As asked for. A label, except in Brazil, whose IBAN carries it |
 | `iban` | Electronic form; empty where the country has no IBAN form |
-| `formatted` | Display form: `DE69 6137 0086 0438 5498 26`, `021000021 123456789` |
+| `formatted` | Display form: `DE89 3704 0044 0532 0130 00`, `110000000 000123456789` |
 | `bank_code`, `branch_code` | The everyday code where a country has two; the branch is empty when there is none |
 | `account_number` | What follows the bank and branch, with its own check digit |
 | `bank_name`, `bic` | Empty when no listed bank has the code |
