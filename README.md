@@ -66,13 +66,13 @@ These examples use `safe`. Germany's and the US's accounts are values a sandbox 
 
 ## Integration
 
-[`fingen.hpp`](https://github.com/dasmig/finance-generator/blob/v1-development/dasmig/fingen.hpp) is the library [released here](https://github.com/dasmig/finance-generator/releases). Keep [`core.hpp`](https://github.com/dasmig/finance-generator/blob/v1-development/dasmig/core.hpp) and the [`core/`](https://github.com/dasmig/finance-generator/tree/v1-development/dasmig/core) directory ([dasmig-core](https://github.com/dasmig/dasmig-core)) in the same directory. Add
+[`fingen.hpp`](https://github.com/dasmig/finance-generator/blob/main/dasmig/fingen.hpp) is the library [released here](https://github.com/dasmig/finance-generator/releases). Keep [`core.hpp`](https://github.com/dasmig/finance-generator/blob/main/dasmig/core.hpp) and the [`core/`](https://github.com/dasmig/finance-generator/tree/main/dasmig/core) directory ([dasmig-core](https://github.com/dasmig/dasmig-core)) in the same directory. Add
 
 ```cpp
 #include <dasmig/fingen.hpp>
 ```
 
-to the files you want to use it in, and supply the [`resources`](https://github.com/dasmig/finance-generator/tree/v1-development/resources) folder (or define `DASMIG_FINANCE_EMBED`).
+to the files you want to use it in, and supply the [`resources`](https://github.com/dasmig/finance-generator/tree/main/resources) folder (or define `DASMIG_FINANCE_EMBED`).
 
 ## Usage
 
@@ -148,6 +148,7 @@ Tested with:
 | [occupation-generator](https://github.com/dasmig/occupation-generator) | Employment status, education and occupation by country, age and sex |
 | [persona-generator](https://github.com/dasmig/persona-generator) | Complete characters composed from the other generators |
 | [phone-generator](https://github.com/dasmig/phone-generator) | Phone numbers valid in each country's numbering plan |
+| [property-generator](https://github.com/dasmig/property-generator) | Homes that fit a household: dwelling type, tenure, rooms, size, age and cost |
 | [relationship-generator](https://github.com/dasmig/relationship-generator) | Families around a person: parents, siblings, partners and children |
 | [trait-generator](https://github.com/dasmig/trait-generator) | Personality traits with conflicts, synergies and Big Five axes |
 | [user-generator](https://github.com/dasmig/user-generator) | Complete user records: account, username, email, phone and address |
